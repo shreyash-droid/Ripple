@@ -1,0 +1,20 @@
+{
+  "name": "chatbot-modes",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shreyash-droid/ModeMesh.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/shreyash-droid/ModeMesh/issues"
+  },
+  "homepage": "https://github.com/shreyash-droid/ModeMesh#readme",
+  "description": ""
+}

@@ -1,0 +1,21 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "Serverless backend for the multi-mode chatbot",
+  "type": "module",
+  "scripts": {
+    "deploy": "serverless deploy",
+    "offline": "serverless offline",
+    "logs": "serverless logs --function"
+  },
+  "devDependencies": {
+    "serverless": "^4.40.0",
+    "serverless-offline": "^14.0.0"
+  },
+  "dependencies": {
+    "@google/genai": "^2.13.0",
+    "dotenv": "^17.4.2",
+    "groq-sdk": "^1.4.0",
+    "pg": "^8.22.0"
+  }
+}

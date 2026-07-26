@@ -1,0 +1,52 @@
+service: chatbot-modes
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ap-south-1
+  httpApi:
+    cors: true
+  environment:
+    DATABASE_URL: ${env:DATABASE_URL}
+    GROQ_API_KEY: ${env:GROQ_API_KEY}
+
+functions:
+  health:
+    handler: handlers/health.handler
+    events:
+      - httpApi:
+          path: /api/health
+          method: get
+  dbtest:
+    handler: handlers/dbtest.handler
+    events:
+      - httpApi:
+          path: /api/dbtest
+          method: get
+  llmtest:
+    handler: handlers/llmtest.handler
+    events:
+      - httpApi:
+          path: /api/llmtest
+          method: get
+  chat:
+    handler: handlers/chat.handler
+    events:
+      - httpApi:
+          path: /api/chat
+          method: post
+  listConversations:
+    handler: handlers/listConversations.handler
+    events:
+      - httpApi:
+          path: /api/conversations
+          method: get
+  getMessages:
+    handler: handlers/getMessages.handler
+    events:
+      - httpApi:
+          path: /api/conversations/{id}/messages
+          method: get
+
+plugins:
+  - serverless-offline
