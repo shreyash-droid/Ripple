@@ -1,13 +1,19 @@
 import { useEffect, useRef } from 'react'
 
 // Three halftone wave layers of drifting 0/1 digits: dense at the bottom,
-// dissolving toward the crest. The waves recede, flatten and phase-shift as
-// the scroll progress (`progressRef`) moves the stage from hero to chat.
+// dissolving toward the crest. `base` puts the crest at 60% of the height, so
+// the field fills the bottom 40% of the screen. The waves recede, flatten and
+// phase-shift as scroll progress (`progressRef`) moves hero → chat.
 const LAYERS = [
-  { base: 0.86, amp: 0.1, k: 0.0045, k2: 0.011, speed: 0.3, color: '124,111,255', alpha: 0.16 },
-  { base: 0.9, amp: 0.13, k: 0.0032, k2: 0.008, speed: -0.2, color: '232,92,200', alpha: 0.1 },
-  { base: 0.94, amp: 0.16, k: 0.0024, k2: 0.006, speed: 0.13, color: '92,200,232', alpha: 0.07 },
+  { base: 0.6, amp: 0.055, k: 0.0045, k2: 0.011, speed: 0.3, color: '124,240,255', alpha: 0.2 },
+  { base: 0.645, amp: 0.07, k: 0.0032, k2: 0.008, speed: -0.2, color: '41,121,255', alpha: 0.14 },
+  { base: 0.69, amp: 0.085, k: 0.0024, k2: 0.006, speed: 0.13, color: '124,111,255', alpha: 0.1 },
 ]
+
+// Cursor interaction: the crest bulges upward toward the pointer, digits in
+// range brighten, and the ones nearest it flip more often.
+const BULGE_HEIGHT = 54
+const BULGE_SIGMA = 150
 
 export default function BinaryWaves({ progressRef }) {
   const canvasRef = useRef(null)
@@ -19,7 +25,7 @@ export default function BinaryWaves({ progressRef }) {
     const ctx = canvas.getContext('2d')
     const isMobile = window.innerWidth < 760
     const cell = isMobile ? 26 : 17
-    const radius = isMobile ? 120 : 180
+    const radius = isMobile ? 150 : 230
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5)
 
     const cursor = { x: -9999, y: -9999 }
@@ -78,14 +84,29 @@ export default function BinaryWaves({ progressRef }) {
       const flat = 1 - sp * 0.65
       const phase = sp * 2.4
 
+      // How strongly the pointer pulls at the surface: full effect when it
+      // hovers the field, fading out as it moves up into the hero.
+      const inField = cursor.y > -1000
+      const reach = inField ? Math.max(0, 1 - Math.max(0, h * 0.5 - cursor.y) / (h * 0.5)) : 0
+
       for (let L = 0; L < LAYERS.length; L++) {
         const ly = LAYERS[L]
         for (let c = 0; c < cols; c++) {
           const x = c * cell + cell / 2
+          // the crest lifts toward the pointer, most on the nearest layer
+          const cdx = x - cursor.x
+          const bulge =
+            reach > 0
+              ? Math.exp(-(cdx * cdx) / (2 * BULGE_SIGMA * BULGE_SIGMA)) *
+                BULGE_HEIGHT *
+                reach *
+                (1 - L * 0.22)
+              : 0
           // wave surface: two harmonics for a livelier crest
           const surf =
             h * ly.base +
-            sink +
+            sink -
+            bulge +
             Math.sin(x * ly.k + t * ly.speed + phase + L * 1.7) * h * ly.amp * flat +
             Math.sin(x * ly.k2 - t * ly.speed * 0.6 + phase * 0.7 + L) * h * ly.amp * 0.35 * flat
           const r0 = Math.max(0, Math.floor(surf / cell))
@@ -104,7 +125,11 @@ export default function BinaryWaves({ progressRef }) {
             const d2 = dx * dx + dy * dy
             if (d2 < radius * radius) {
               const boost = 1 - Math.sqrt(d2) / radius
-              a += boost * boost * 0.1
+              a += boost * boost * 0.34
+              // digits right under the pointer churn
+              if (boost > 0.55 && Math.random() < 0.025) {
+                digits[idx] = digits[idx] === '0' ? '1' : '0'
+              }
             }
 
             ctx.fillStyle = `rgba(${ly.color},${a.toFixed(3)})`

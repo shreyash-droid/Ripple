@@ -12,7 +12,8 @@
         "cors": true
       },
       "environment": {
-        "DATABASE_URL": "postgresql://neondb_owner:npg_mcR6hPxwW8Eq@ep-damp-violet-azye21tq-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+        "DATABASE_URL": "postgresql://neondb_owner:npg_mcR6hPxwW8Eq@ep-damp-violet-azye21tq-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+        "GROQ_API_KEY": "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"
       },
       "stage": "dev",
       "versionFunctions": true,
@@ -30,6 +31,30 @@
             "Type": "AWS::Logs::LogGroup",
             "Properties": {
               "LogGroupName": "/aws/lambda/chatbot-modes-dev-dbtest"
+            }
+          },
+          "LlmtestLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/chatbot-modes-dev-llmtest"
+            }
+          },
+          "ChatLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/chatbot-modes-dev-chat"
+            }
+          },
+          "ListConversationsLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/chatbot-modes-dev-listConversations"
+            }
+          },
+          "GetMessagesLogGroup": {
+            "Type": "AWS::Logs::LogGroup",
+            "Properties": {
+              "LogGroupName": "/aws/lambda/chatbot-modes-dev-getMessages"
             }
           },
           "IamRoleLambdaExecution": {
@@ -115,7 +140,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-ap-south-1-f943d721-45a9",
-                "S3Key": "serverless/chatbot-modes/dev/1785011946862-2026-07-25T20:39:06.862Z/chatbot-modes.zip"
+                "S3Key": "serverless/chatbot-modes/dev/1785149471411-2026-07-27T10:51:11.411Z/chatbot-modes.zip"
               },
               "Handler": "handlers/health.handler",
               "Runtime": "nodejs20.x",
@@ -124,7 +149,8 @@
               "Timeout": 6,
               "Environment": {
                 "Variables": {
-                  "DATABASE_URL": "postgresql://neondb_owner:npg_mcR6hPxwW8Eq@ep-damp-violet-azye21tq-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+                  "DATABASE_URL": "postgresql://neondb_owner:npg_mcR6hPxwW8Eq@ep-damp-violet-azye21tq-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+                  "GROQ_API_KEY": "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"
                 }
               },
               "Role": {
@@ -143,7 +169,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-ap-south-1-f943d721-45a9",
-                "S3Key": "serverless/chatbot-modes/dev/1785011946862-2026-07-25T20:39:06.862Z/chatbot-modes.zip"
+                "S3Key": "serverless/chatbot-modes/dev/1785149471411-2026-07-27T10:51:11.411Z/chatbot-modes.zip"
               },
               "Handler": "handlers/dbtest.handler",
               "Runtime": "nodejs20.x",
@@ -152,7 +178,8 @@
               "Timeout": 6,
               "Environment": {
                 "Variables": {
-                  "DATABASE_URL": "postgresql://neondb_owner:npg_mcR6hPxwW8Eq@ep-damp-violet-azye21tq-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+                  "DATABASE_URL": "postgresql://neondb_owner:npg_mcR6hPxwW8Eq@ep-damp-violet-azye21tq-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+                  "GROQ_API_KEY": "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"
                 }
               },
               "Role": {
@@ -166,24 +193,180 @@
               "DbtestLogGroup"
             ]
           },
-          "HealthLambdaVersionjG0idbTnfMgV0wcZdLeoiIZrtCLpr1yQXrr239fd82E": {
+          "LlmtestLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-ap-south-1-f943d721-45a9",
+                "S3Key": "serverless/chatbot-modes/dev/1785149471411-2026-07-27T10:51:11.411Z/chatbot-modes.zip"
+              },
+              "Handler": "handlers/llmtest.handler",
+              "Runtime": "nodejs20.x",
+              "FunctionName": "chatbot-modes-dev-llmtest",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Environment": {
+                "Variables": {
+                  "DATABASE_URL": "postgresql://neondb_owner:npg_mcR6hPxwW8Eq@ep-damp-violet-azye21tq-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+                  "GROQ_API_KEY": "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"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "LlmtestLogGroup"
+            ]
+          },
+          "ChatLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-ap-south-1-f943d721-45a9",
+                "S3Key": "serverless/chatbot-modes/dev/1785149471411-2026-07-27T10:51:11.411Z/chatbot-modes.zip"
+              },
+              "Handler": "handlers/chat.handler",
+              "Runtime": "nodejs20.x",
+              "FunctionName": "chatbot-modes-dev-chat",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Environment": {
+                "Variables": {
+                  "DATABASE_URL": "postgresql://neondb_owner:npg_mcR6hPxwW8Eq@ep-damp-violet-azye21tq-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+                  "GROQ_API_KEY": "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"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "ChatLogGroup"
+            ]
+          },
+          "ListConversationsLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-ap-south-1-f943d721-45a9",
+                "S3Key": "serverless/chatbot-modes/dev/1785149471411-2026-07-27T10:51:11.411Z/chatbot-modes.zip"
+              },
+              "Handler": "handlers/listConversations.handler",
+              "Runtime": "nodejs20.x",
+              "FunctionName": "chatbot-modes-dev-listConversations",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Environment": {
+                "Variables": {
+                  "DATABASE_URL": "postgresql://neondb_owner:npg_mcR6hPxwW8Eq@ep-damp-violet-azye21tq-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+                  "GROQ_API_KEY": "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"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "ListConversationsLogGroup"
+            ]
+          },
+          "GetMessagesLambdaFunction": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+              "Code": {
+                "S3Bucket": "serverless-framework-deployments-ap-south-1-f943d721-45a9",
+                "S3Key": "serverless/chatbot-modes/dev/1785149471411-2026-07-27T10:51:11.411Z/chatbot-modes.zip"
+              },
+              "Handler": "handlers/getMessages.handler",
+              "Runtime": "nodejs20.x",
+              "FunctionName": "chatbot-modes-dev-getMessages",
+              "MemorySize": 1024,
+              "Timeout": 6,
+              "Environment": {
+                "Variables": {
+                  "DATABASE_URL": "postgresql://neondb_owner:npg_mcR6hPxwW8Eq@ep-damp-violet-azye21tq-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+                  "GROQ_API_KEY": "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"
+                }
+              },
+              "Role": {
+                "Fn::GetAtt": [
+                  "IamRoleLambdaExecution",
+                  "Arn"
+                ]
+              }
+            },
+            "DependsOn": [
+              "GetMessagesLogGroup"
+            ]
+          },
+          "HealthLambdaVersionyecMSkbNkxQoEnU8i5Cj6Mdi1VpFCqFxddQ0aQwg": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "HealthLambdaFunction"
               },
-              "CodeSha256": "OIs3iM6gVKNl8sVuwPrEEI3FJpPwcRmbm2nuQMPNAb8="
+              "CodeSha256": "ajFEqSuptrwJiNAb4qWofRfFTyYTxtm7rHLq3Aup1X4="
             }
           },
-          "DbtestLambdaVersionBcsbxEUafJF8PBv5zvQF8sGYBHcCBhUXe8QUMCDVlk": {
+          "ListConversationsLambdaVersionG973wjKcTlnLdtPyxfPMnzcP08sxwPySL8fPjkM8yM": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "ListConversationsLambdaFunction"
+              },
+              "CodeSha256": "ajFEqSuptrwJiNAb4qWofRfFTyYTxtm7rHLq3Aup1X4="
+            }
+          },
+          "DbtestLambdaVersionq7wTnANPZ0DsVtedqVwArbtxXD4RHo0RCjRXxd9s": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "DbtestLambdaFunction"
               },
-              "CodeSha256": "OIs3iM6gVKNl8sVuwPrEEI3FJpPwcRmbm2nuQMPNAb8="
+              "CodeSha256": "ajFEqSuptrwJiNAb4qWofRfFTyYTxtm7rHLq3Aup1X4="
+            }
+          },
+          "LlmtestLambdaVersion27ruV7cvlehSZZTRhTpNYeCGiYh62MW7UuWJhz4M0k": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "LlmtestLambdaFunction"
+              },
+              "CodeSha256": "ajFEqSuptrwJiNAb4qWofRfFTyYTxtm7rHLq3Aup1X4="
+            }
+          },
+          "GetMessagesLambdaVersionQQB09EEA4ocWdffQOQghPIBB5WYDtCrQ4Kereotmk6I": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "GetMessagesLambdaFunction"
+              },
+              "CodeSha256": "ajFEqSuptrwJiNAb4qWofRfFTyYTxtm7rHLq3Aup1X4="
+            }
+          },
+          "ChatLambdaVersionpSCZ1NbGyFyEqBh5N0TduuR3qP8cMpbWxbI": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "ChatLambdaFunction"
+              },
+              "CodeSha256": "ajFEqSuptrwJiNAb4qWofRfFTyYTxtm7rHLq3Aup1X4="
             }
           },
           "HttpApi": {
@@ -203,7 +386,8 @@
                 ],
                 "AllowMethods": [
                   "OPTIONS",
-                  "GET"
+                  "GET",
+                  "POST"
                 ],
                 "AllowOrigins": [
                   "*"
@@ -367,6 +551,294 @@
               }
             },
             "DependsOn": "HttpApiIntegrationDbtest"
+          },
+          "LlmtestLambdaPermissionHttpApi": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "LlmtestLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "HttpApi"
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "HttpApiIntegrationLlmtest": {
+            "Type": "AWS::ApiGatewayV2::Integration",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "IntegrationType": "AWS_PROXY",
+              "IntegrationUri": {
+                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"LlmtestLambdaPermissionHttpApi\"][\"Properties\"][\"FunctionName\"]"
+              },
+              "PayloadFormatVersion": "2.0",
+              "TimeoutInMillis": 30000
+            }
+          },
+          "HttpApiRouteGetApiLlmtest": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "GET /api/llmtest",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationLlmtest"
+                    }
+                  ]
+                ]
+              }
+            },
+            "DependsOn": "HttpApiIntegrationLlmtest"
+          },
+          "ChatLambdaPermissionHttpApi": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "ChatLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "HttpApi"
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "HttpApiIntegrationChat": {
+            "Type": "AWS::ApiGatewayV2::Integration",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "IntegrationType": "AWS_PROXY",
+              "IntegrationUri": {
+                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"ChatLambdaPermissionHttpApi\"][\"Properties\"][\"FunctionName\"]"
+              },
+              "PayloadFormatVersion": "2.0",
+              "TimeoutInMillis": 30000
+            }
+          },
+          "HttpApiRoutePostApiChat": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "POST /api/chat",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationChat"
+                    }
+                  ]
+                ]
+              }
+            },
+            "DependsOn": "HttpApiIntegrationChat"
+          },
+          "ListConversationsLambdaPermissionHttpApi": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "ListConversationsLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "HttpApi"
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "HttpApiIntegrationListConversations": {
+            "Type": "AWS::ApiGatewayV2::Integration",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "IntegrationType": "AWS_PROXY",
+              "IntegrationUri": {
+                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"ListConversationsLambdaPermissionHttpApi\"][\"Properties\"][\"FunctionName\"]"
+              },
+              "PayloadFormatVersion": "2.0",
+              "TimeoutInMillis": 30000
+            }
+          },
+          "HttpApiRouteGetApiConversations": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "GET /api/conversations",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationListConversations"
+                    }
+                  ]
+                ]
+              }
+            },
+            "DependsOn": "HttpApiIntegrationListConversations"
+          },
+          "GetMessagesLambdaPermissionHttpApi": {
+            "Type": "AWS::Lambda::Permission",
+            "Properties": {
+              "FunctionName": {
+                "Fn::GetAtt": [
+                  "GetMessagesLambdaFunction",
+                  "Arn"
+                ]
+              },
+              "Action": "lambda:InvokeFunction",
+              "Principal": "apigateway.amazonaws.com",
+              "SourceArn": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition"
+                    },
+                    ":execute-api:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "HttpApi"
+                    },
+                    "/*"
+                  ]
+                ]
+              }
+            }
+          },
+          "HttpApiIntegrationGetMessages": {
+            "Type": "AWS::ApiGatewayV2::Integration",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "IntegrationType": "AWS_PROXY",
+              "IntegrationUri": {
+                "$ref": "$[\"service\"][\"provider\"][\"compiledCloudFormationTemplate\"][\"Resources\"][\"GetMessagesLambdaPermissionHttpApi\"][\"Properties\"][\"FunctionName\"]"
+              },
+              "PayloadFormatVersion": "2.0",
+              "TimeoutInMillis": 30000
+            }
+          },
+          "HttpApiRouteGetApiConversationsIdVarMessages": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "GET /api/conversations/{id}/messages",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationGetMessages"
+                    }
+                  ]
+                ]
+              }
+            },
+            "DependsOn": "HttpApiIntegrationGetMessages"
           }
         },
         "Outputs": {
@@ -379,19 +851,55 @@
           "HealthLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "HealthLambdaVersionjG0idbTnfMgV0wcZdLeoiIZrtCLpr1yQXrr239fd82E"
+              "Ref": "HealthLambdaVersionyecMSkbNkxQoEnU8i5Cj6Mdi1VpFCqFxddQ0aQwg"
             },
             "Export": {
               "Name": "sls-chatbot-modes-dev-HealthLambdaFunctionQualifiedArn"
             }
           },
+          "ListConversationsLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "ListConversationsLambdaVersionG973wjKcTlnLdtPyxfPMnzcP08sxwPySL8fPjkM8yM"
+            },
+            "Export": {
+              "Name": "sls-chatbot-modes-dev-ListConversationsLambdaFunctionQualifiedArn"
+            }
+          },
           "DbtestLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "DbtestLambdaVersionBcsbxEUafJF8PBv5zvQF8sGYBHcCBhUXe8QUMCDVlk"
+              "Ref": "DbtestLambdaVersionq7wTnANPZ0DsVtedqVwArbtxXD4RHo0RCjRXxd9s"
             },
             "Export": {
               "Name": "sls-chatbot-modes-dev-DbtestLambdaFunctionQualifiedArn"
+            }
+          },
+          "LlmtestLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "LlmtestLambdaVersion27ruV7cvlehSZZTRhTpNYeCGiYh62MW7UuWJhz4M0k"
+            },
+            "Export": {
+              "Name": "sls-chatbot-modes-dev-LlmtestLambdaFunctionQualifiedArn"
+            }
+          },
+          "GetMessagesLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "GetMessagesLambdaVersionQQB09EEA4ocWdffQOQghPIBB5WYDtCrQ4Kereotmk6I"
+            },
+            "Export": {
+              "Name": "sls-chatbot-modes-dev-GetMessagesLambdaFunctionQualifiedArn"
+            }
+          },
+          "ChatLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "ChatLambdaVersionpSCZ1NbGyFyEqBh5N0TduuR3qP8cMpbWxbI"
+            },
+            "Export": {
+              "Name": "sls-chatbot-modes-dev-ChatLambdaFunctionQualifiedArn"
             }
           },
           "HttpApiId": {
@@ -455,7 +963,7 @@
         "timeout": 6,
         "runtime": "nodejs20.x",
         "vpc": {},
-        "versionLogicalId": "HealthLambdaVersionjG0idbTnfMgV0wcZdLeoiIZrtCLpr1yQXrr239fd82E"
+        "versionLogicalId": "HealthLambdaVersionyecMSkbNkxQoEnU8i5Cj6Mdi1VpFCqFxddQ0aQwg"
       },
       "dbtest": {
         "handler": "handlers/dbtest.handler",
@@ -475,7 +983,87 @@
         "timeout": 6,
         "runtime": "nodejs20.x",
         "vpc": {},
-        "versionLogicalId": "DbtestLambdaVersionBcsbxEUafJF8PBv5zvQF8sGYBHcCBhUXe8QUMCDVlk"
+        "versionLogicalId": "DbtestLambdaVersionq7wTnANPZ0DsVtedqVwArbtxXD4RHo0RCjRXxd9s"
+      },
+      "llmtest": {
+        "handler": "handlers/llmtest.handler",
+        "events": [
+          {
+            "httpApi": {
+              "path": "/api/llmtest",
+              "method": "get"
+            },
+            "resolvedMethod": "GET",
+            "resolvedPath": "/api/llmtest"
+          }
+        ],
+        "name": "chatbot-modes-dev-llmtest",
+        "package": {},
+        "memory": 1024,
+        "timeout": 6,
+        "runtime": "nodejs20.x",
+        "vpc": {},
+        "versionLogicalId": "LlmtestLambdaVersion27ruV7cvlehSZZTRhTpNYeCGiYh62MW7UuWJhz4M0k"
+      },
+      "chat": {
+        "handler": "handlers/chat.handler",
+        "events": [
+          {
+            "httpApi": {
+              "path": "/api/chat",
+              "method": "post"
+            },
+            "resolvedMethod": "POST",
+            "resolvedPath": "/api/chat"
+          }
+        ],
+        "name": "chatbot-modes-dev-chat",
+        "package": {},
+        "memory": 1024,
+        "timeout": 6,
+        "runtime": "nodejs20.x",
+        "vpc": {},
+        "versionLogicalId": "ChatLambdaVersionpSCZ1NbGyFyEqBh5N0TduuR3qP8cMpbWxbI"
+      },
+      "listConversations": {
+        "handler": "handlers/listConversations.handler",
+        "events": [
+          {
+            "httpApi": {
+              "path": "/api/conversations",
+              "method": "get"
+            },
+            "resolvedMethod": "GET",
+            "resolvedPath": "/api/conversations"
+          }
+        ],
+        "name": "chatbot-modes-dev-listConversations",
+        "package": {},
+        "memory": 1024,
+        "timeout": 6,
+        "runtime": "nodejs20.x",
+        "vpc": {},
+        "versionLogicalId": "ListConversationsLambdaVersionG973wjKcTlnLdtPyxfPMnzcP08sxwPySL8fPjkM8yM"
+      },
+      "getMessages": {
+        "handler": "handlers/getMessages.handler",
+        "events": [
+          {
+            "httpApi": {
+              "path": "/api/conversations/{id}/messages",
+              "method": "get"
+            },
+            "resolvedMethod": "GET",
+            "resolvedPath": "/api/conversations/{id}/messages"
+          }
+        ],
+        "name": "chatbot-modes-dev-getMessages",
+        "package": {},
+        "memory": 1024,
+        "timeout": 6,
+        "runtime": "nodejs20.x",
+        "vpc": {},
+        "versionLogicalId": "GetMessagesLambdaVersionQQB09EEA4ocWdffQOQghPIBB5WYDtCrQ4Kereotmk6I"
       }
     },
     "configValidationMode": "warn",
@@ -498,7 +1086,7 @@
     "artifact": "C:\\dev\\chatbot-modes\\backend\\.serverless\\chatbot-modes.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/chatbot-modes/dev/1785011946862-2026-07-25T20:39:06.862Z",
+    "artifactDirectoryName": "serverless/chatbot-modes/dev/1785149471411-2026-07-27T10:51:11.411Z",
     "artifact": "chatbot-modes.zip"
   }
 }

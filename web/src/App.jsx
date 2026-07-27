@@ -5,14 +5,25 @@ import Hero from './components/Hero'
 import Sidebar from './components/Sidebar'
 import Thread from './components/Thread'
 import TopBar from './components/TopBar'
+import { CodeIcon, SparkIcon, TargetIcon } from './components/Icons'
 import { getMessages, listConversations, sendChat } from './lib/api'
 import './styles/app.css'
 
 // Mirrors MODE_PROMPTS in backend/lib/llm.js.
 const MODES = [
-  { value: 'general', label: 'General', hint: 'A helpful, friendly assistant' },
-  { value: 'coach', label: 'Coach', hint: 'Interview coaching with constructive feedback' },
-  { value: 'reviewer', label: 'Reviewer', hint: 'Senior code review — bugs, style, improvements' },
+  { value: 'general', label: 'General', hint: 'A helpful, friendly assistant', Icon: SparkIcon },
+  {
+    value: 'coach',
+    label: 'Coach',
+    hint: 'Interview coaching with constructive feedback',
+    Icon: TargetIcon,
+  },
+  {
+    value: 'reviewer',
+    label: 'Reviewer',
+    hint: 'Senior code review — bugs, style, improvements',
+    Icon: CodeIcon,
+  },
 ]
 
 const USER = { name: 'Maya Chen', initials: 'M' }
@@ -35,6 +46,7 @@ export default function App() {
   const [mode, setMode] = useState('general')
   const [loading, setLoading] = useState(false)
   const [streaming, setStreaming] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
 
   const busy = loading || streaming
 
@@ -48,7 +60,8 @@ export default function App() {
     const p = progressRef.current
     const vh = root.clientHeight || window.innerHeight
     // The composer starts where the CSS `top` puts it and drops to the bottom.
-    const startTop = Math.max(vh * 0.4, vh * 0.14 + 230)
+    // Mirrors the `top` in .h2c-composer.
+    const startTop = Math.max(vh * 0.36, vh * 0.14 + 195)
 
     root.style.setProperty('--p', String(p))
     root.style.setProperty('--drop', `${Math.max(0, vh - COMPOSER_HEIGHT - startTop)}px`)
@@ -221,6 +234,8 @@ export default function App() {
               onSelect={selectConversation}
               onNewChat={newChat}
               user={USER}
+              collapsed={sidebarCollapsed}
+              onToggle={() => setSidebarCollapsed((v) => !v)}
             />
 
             <div className="h2c-main">

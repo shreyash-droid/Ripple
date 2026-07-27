@@ -1,11 +1,64 @@
-import { PlusIcon } from './Icons'
+import { PanelLeftIcon, PlusIcon } from './Icons'
 
-export default function Sidebar({ conversations, activeId, onSelect, onNewChat, user }) {
+export default function Sidebar({
+  conversations,
+  activeId,
+  onSelect,
+  onNewChat,
+  user,
+  collapsed,
+  onToggle,
+}) {
+  if (collapsed) {
+    return (
+      <aside className="h2c-sidebar is-collapsed">
+        <div className="h2c-rail">
+          <div className="h2c-orb h2c-rail__orb" />
+          <button
+            type="button"
+            className="h2c-railbtn"
+            onClick={onToggle}
+            aria-label="Expand sidebar"
+            title="Expand sidebar"
+          >
+            <PanelLeftIcon />
+          </button>
+          <button
+            type="button"
+            className="h2c-railbtn"
+            onClick={onNewChat}
+            aria-label="New chat"
+            title="New chat"
+          >
+            <PlusIcon size={17} />
+          </button>
+        </div>
+
+        <div className="h2c-rail__foot">
+          <div className="h2c-sidebar__user-avatar" title={user.name}>
+            {user.initials}
+          </div>
+        </div>
+      </aside>
+    )
+  }
+
   return (
     <aside className="h2c-sidebar">
-      <div className="h2c-brand h2c-sidebar__brand">
-        <div className="h2c-orb" />
-        <span className="h2c-brand__name">Ripple</span>
+      <div className="h2c-sidebar__head">
+        <div className="h2c-brand">
+          <div className="h2c-orb" />
+          <span className="h2c-brand__name">Ripple</span>
+        </div>
+        <button
+          type="button"
+          className="h2c-railbtn"
+          onClick={onToggle}
+          aria-label="Collapse sidebar"
+          title="Collapse sidebar"
+        >
+          <PanelLeftIcon />
+        </button>
       </div>
 
       <div className="h2c-sidebar__new">

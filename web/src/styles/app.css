@@ -16,17 +16,22 @@
   }
 }
 
+/* Each phase carries its own easing so the settle doesn't get squeezed into
+   the tail of a single ease-out: quick rise, then a long relaxed drift down. */
 @keyframes h2c-wake {
   0% {
     opacity: 0;
-    transform: translateY(100%);
+    transform: translateY(80%);
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
-  55% {
+  38% {
     opacity: 1;
     transform: translateY(2%);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.35, 1);
   }
-  82% {
+  78% {
     transform: translateY(38%);
+    animation-timing-function: cubic-bezier(0.33, 0, 0.67, 1);
   }
   100% {
     opacity: 1;
@@ -126,21 +131,26 @@
 .h2c-ambient__wake {
   position: absolute;
   inset: 0;
-  animation: h2c-wake 6s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+  /* linear here — the keyframes above supply their own per-phase easing */
+  animation: h2c-wake 3.2s linear both;
 }
 
 .h2c-ambient__glow {
   position: absolute;
   inset: 0;
-  opacity: 0.8;
-  animation: h2c-breathe 14s var(--ease-standard) 6s infinite;
+  opacity: 0.85;
+  animation: h2c-breathe 14s var(--ease-standard) 3.2s infinite;
+  /* Centre sits ~69vh below the fold, so the stops read bottom-up: the cyan
+     core and the deep purple ring around it surface during the entrance, and
+     the indigo falloff is what remains once the glow settles. */
   background: radial-gradient(
     130% 100% at 50% 135%,
-    #ffd600 8%,
-    #ff6d00 26%,
-    #ff80ab 46%,
-    #2979ff 66%,
-    rgba(41, 121, 255, 0.25) 78%,
+    #7cf0ff 6%,
+    #4c1d95 20%,
+    #22c3ff 34%,
+    #2979ff 50%,
+    #4c3bff 64%,
+    rgba(76, 59, 255, 0.28) 78%,
     rgba(10, 10, 11, 0) 92%
   );
 }
@@ -193,7 +203,8 @@
 }
 
 .h2c-brand__name {
-  font: 500 18px/1 var(--font-serif);
+  font: italic 600 18px/1 var(--font-display);
+  letter-spacing: -0.02em;
   color: var(--text-primary);
 }
 
@@ -259,32 +270,30 @@
 
 .h2c-hero__title {
   margin: 0;
-  font: 500 clamp(26px, 4.2vw, 52px) / 1.1 var(--font-serif);
+  font: 500 clamp(26px, 4.2vw, 52px) / 1.1 var(--font-display);
   color: var(--text-primary);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.03em;
   white-space: nowrap;
+}
+
+/* roman states the claim, italic carries the voice */
+.h2c-hero__title em {
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.02em;
 }
 
 .h2c-hero__sub {
   margin: 0;
   font: 400 clamp(14px, 1.6vw, 17px) / 1.5 var(--font-sans);
   color: var(--text-secondary);
+  letter-spacing: -0.01em;
   white-space: nowrap;
 }
 
-.h2c-scrollcue {
-  position: absolute;
-  left: 50%;
-  bottom: 5%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-tertiary);
-  font: 500 12px/1 var(--font-sans);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.h2c-hero__sub em {
+  font-style: italic;
+  color: var(--text-primary);
 }
 
 /* ------------------------------------------------------------------ *
@@ -309,17 +318,65 @@
   border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
+  transition: width var(--duration-base) var(--ease-standard);
 }
 
-.h2c-sidebar__brand {
+.h2c-sidebar.is-collapsed {
+  width: 60px;
+}
+
+.h2c-sidebar__head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
-  padding: 18px 16px;
+  padding: 14px 12px 14px 16px;
 }
 
-.h2c-sidebar__brand .h2c-brand__name {
+.h2c-sidebar__head .h2c-brand__name {
   font-size: 17px;
+}
+
+/* collapsed rail */
+
+.h2c-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 0 0;
+}
+
+.h2c-rail__orb {
+  margin-bottom: 10px;
+}
+
+.h2c-rail__foot {
+  margin-top: auto;
+  display: flex;
+  justify-content: center;
+  padding: 14px 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.h2c-railbtn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.h2c-railbtn:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
 }
 
 .h2c-sidebar__new {
@@ -537,7 +594,7 @@
 .h2c-empty {
   text-align: center;
   color: var(--text-tertiary);
-  font: 400 15px/1.6 var(--font-sans);
+  font: italic 400 15px/1.6 var(--font-sans);
   padding: 40px 0;
 }
 
@@ -561,7 +618,7 @@
 .h2c-loader__label {
   display: flex;
   color: var(--text-secondary);
-  font: 400 14px/1 var(--font-sans);
+  font: italic 400 14px/1 var(--font-sans);
   letter-spacing: 0.02em;
 }
 
@@ -577,7 +634,9 @@
 .h2c-composer {
   position: absolute;
   left: 50%;
-  top: max(40%, calc(14% + 230px));
+  /* keep in lockstep with startTop in App.jsx — the drop distance is derived
+     from it, so the resting chat position stays put when this changes */
+  top: max(36%, calc(14% + 195px));
   transform: translateX(-50%) translateY(calc(var(--p, 0) * var(--drop, 40vh)));
   width: min(680px, 94vw);
   display: flex;
@@ -589,57 +648,84 @@
   z-index: 12;
 }
 
+/* aligned to the left edge of the input bar below it */
 .h2c-modes {
+  width: min(640px, 100%);
   display: flex;
-  gap: 6px;
+  justify-content: flex-start;
+  gap: 4px;
+  padding-left: 6px;
   opacity: clamp(0, calc((var(--p, 0) - 0.55) / 0.35), 1);
   pointer-events: var(--chat-pe, none);
 }
 
 .h2c-mode {
-  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: none;
   border-radius: var(--radius-pill);
-  background: var(--surface-2);
-  border: 1px solid var(--border-default);
+  background: transparent;
   color: var(--text-secondary);
   font: 500 13px/1.3 var(--font-sans);
+  letter-spacing: -0.01em;
   cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-standard);
+  transition: background var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.h2c-mode svg {
+  opacity: 0.75;
 }
 
 .h2c-mode:hover {
-  background: var(--surface-3);
+  background: var(--surface-2);
+  color: var(--text-primary);
 }
 
 .h2c-mode.is-active {
   background: #132c36;
-  border-color: var(--border-accent);
   color: var(--emerald-300);
 }
 
-.h2c-mode:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
+.h2c-mode.is-active svg {
+  opacity: 1;
 }
 
 .h2c-inputbar {
   display: flex;
   align-items: flex-end;
-  gap: 10px;
+  gap: 8px;
   width: min(640px, 100%);
-  padding: 10px 10px 10px 20px;
+  padding: 10px 10px 10px 10px;
   border-radius: var(--radius-pill);
   background: rgba(22, 22, 24, 0.85);
   backdrop-filter: blur(var(--blur-panel));
   -webkit-backdrop-filter: blur(var(--blur-panel));
-  border: 1px solid var(--border-accent);
-  box-shadow: 0 0 0 4px rgba(92, 200, 232, 0.06), var(--shadow-raised);
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-raised);
 }
 
-.h2c-inputbar__clip {
+.h2c-attach {
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
-  margin-bottom: 10px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.h2c-attach:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
 }
 
 .h2c-inputbar__field {
@@ -689,7 +775,8 @@
  * ------------------------------------------------------------------ */
 
 @media (max-width: 760px) {
-  .h2c-sidebar {
+  /* the rail still fits; the expanded panel would swallow the screen */
+  .h2c-sidebar:not(.is-collapsed) {
     display: none;
   }
 

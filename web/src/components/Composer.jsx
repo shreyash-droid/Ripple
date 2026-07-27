@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { ArrowUpIcon, PaperclipIcon } from './Icons'
+import { ArrowUpIcon, PlusIcon } from './Icons'
 
 export default function Composer({ draft, onDraftChange, onSend, modes, mode, onModeChange, busy }) {
   const fieldRef = useRef(null)
@@ -23,21 +23,24 @@ export default function Composer({ draft, onDraftChange, onSend, modes, mode, on
   return (
     <div className="h2c-composer">
       <div className="h2c-modes" id="modes">
-        {modes.map((m) => (
+        {modes.map(({ value, label, hint, Icon }) => (
           <button
             type="button"
-            key={m.value}
-            className={`h2c-mode${m.value === mode ? ' is-active' : ''}`}
-            onClick={() => onModeChange(m.value)}
-            title={m.hint}
+            key={value}
+            className={`h2c-mode${value === mode ? ' is-active' : ''}`}
+            onClick={() => onModeChange(value)}
+            title={hint}
           >
-            {m.label}
+            <Icon />
+            {label}
           </button>
         ))}
       </div>
 
       <div className="h2c-inputbar">
-        <PaperclipIcon />
+        <button type="button" className="h2c-attach" aria-label="Add an attachment">
+          <PlusIcon size={17} />
+        </button>
         <textarea
           ref={fieldRef}
           rows={1}
