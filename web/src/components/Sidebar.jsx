@@ -5,6 +5,7 @@ export default function Sidebar({
   activeId,
   onSelect,
   onNewChat,
+  onHome,
   user,
   collapsed,
   onToggle,
@@ -13,7 +14,15 @@ export default function Sidebar({
     return (
       <aside className="h2c-sidebar is-collapsed">
         <div className="h2c-rail">
-          <div className="h2c-orb h2c-rail__orb" />
+          <button
+            type="button"
+            className="h2c-railbtn h2c-rail__home"
+            onClick={onHome}
+            aria-label="Ripple home"
+            title="Home"
+          >
+            <span className="h2c-orb" />
+          </button>
           <button
             type="button"
             className="h2c-railbtn"
@@ -46,10 +55,10 @@ export default function Sidebar({
   return (
     <aside className="h2c-sidebar">
       <div className="h2c-sidebar__head">
-        <div className="h2c-brand">
-          <div className="h2c-orb" />
+        <button type="button" className="h2c-brand h2c-brand--home" onClick={onHome} title="Home">
+          <span className="h2c-orb" />
           <span className="h2c-brand__name">Ripple</span>
-        </div>
+        </button>
         <button
           type="button"
           className="h2c-railbtn"

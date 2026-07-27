@@ -97,22 +97,55 @@
  * stage
  * ------------------------------------------------------------------ */
 
+/* Registered so the rail width can be *transitioned*. The composer derives its
+   horizontal offset from it, which keeps the sidebar toggle smooth without
+   putting a transition on the composer's own transform (that transform is
+   scroll-driven and must stay frame-exact). */
+@property --rail {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+
 .h2c-root {
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
   background: var(--surface-canvas);
   font-family: var(--font-sans);
+
+  /* how far the chat layer has faded in: 0 at the hero, 1 in the chat */
+  --chat-vis: clamp(0, calc((var(--p, 0) - 0.35) / 0.5), 1);
+  transition: --rail var(--duration-base) var(--ease-standard);
+}
+
+.h2c-root[data-sidebar='collapsed'] {
+  --rail: 60px;
+}
+
+.h2c-root[data-sidebar='expanded'] {
+  --rail: 264px;
 }
 
 .h2c-scroll {
   height: 250vh;
 }
 
+/* Once a message is sent the landing page is retired: the spacer collapses so
+   there is nothing left to scroll back up to. */
+.h2c-scroll.is-entered {
+  height: 100%;
+}
+
+.h2c-root.is-entered {
+  overflow: hidden;
+}
+
 .h2c-stage {
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100dvh; /* phone chrome shrinks the visual viewport */
   overflow: hidden;
 }
 
@@ -194,6 +227,25 @@
   gap: 10px;
 }
 
+/* the sidebar wordmark is the way back to the landing page */
+.h2c-brand--home {
+  margin: 0 -8px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+
+.h2c-brand--home:hover {
+  background: var(--surface-2);
+}
+
+.h2c-rail__home {
+  margin-bottom: 6px;
+}
+
 .h2c-orb {
   width: 22px;
   height: 22px;
@@ -208,26 +260,10 @@
   color: var(--text-primary);
 }
 
-.h2c-topbar__nav {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-}
-
-.h2c-navlink {
-  font: 500 13px/1 var(--font-sans);
-  color: var(--text-secondary);
-  text-decoration: none;
-}
-
-.h2c-navlink:hover {
-  color: var(--text-primary);
-  text-decoration: none;
-}
-
 .h2c-avatar {
   width: 32px;
   height: 32px;
+  padding: 0;
   border-radius: 50%;
   background: var(--surface-2);
   border: 1px solid var(--border-default);
@@ -237,10 +273,13 @@
   color: var(--text-secondary);
   font: 500 12px/1 var(--font-sans);
   cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
 }
 
 .h2c-avatar:hover {
   background: var(--surface-3);
+  color: var(--text-primary);
 }
 
 /* ------------------------------------------------------------------ *
@@ -300,29 +339,34 @@
  * chat layer
  * ------------------------------------------------------------------ */
 
+/* The rail is a grid track, not a sized element: --rail is a registered
+   property, so transitioning it animates the track and the sidebar follows.
+   Animating the sidebar's own `width` instead would relayout it and every
+   descendant each frame. */
 .h2c-chat {
   position: absolute;
   inset: 0;
-  display: flex;
-  opacity: clamp(0, calc((var(--p, 0) - 0.35) / 0.5), 1);
-  transform: translateY(calc((1 - clamp(0, calc((var(--p, 0) - 0.35) / 0.5), 1)) * 20px));
+  display: grid;
+  grid-template-columns: var(--rail, 0px) 1fr;
+  /* minmax(0,1fr), not auto: an auto row lets the items' automatic minimum
+     size grow past the container, which unbounds the thread and kills its
+     overflow scrolling. */
+  grid-template-rows: minmax(0, 1fr);
+  opacity: var(--chat-vis, 0);
+  transform: translateY(calc((1 - var(--chat-vis, 0)) * 20px));
   pointer-events: var(--chat-pe, none);
 }
 
 /* sidebar */
 
 .h2c-sidebar {
-  width: 264px;
-  flex-shrink: 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   background: var(--surface-1);
   border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
-  transition: width var(--duration-base) var(--ease-standard);
-}
-
-.h2c-sidebar.is-collapsed {
-  width: 60px;
 }
 
 .h2c-sidebar__head {
@@ -339,16 +383,28 @@
 
 /* collapsed rail */
 
+/* Content holds its own width so the track can slide over it like a curtain.
+   Without this it would reflow on every frame of the toggle — the same cost
+   the grid track was introduced to avoid. */
+.h2c-sidebar__head,
+.h2c-sidebar__new,
+.h2c-sidebar__label,
+.h2c-sidebar__list,
+.h2c-sidebar__user {
+  width: 264px;
+}
+
+.h2c-rail,
+.h2c-rail__foot {
+  width: 60px;
+}
+
 .h2c-rail {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   padding: 16px 0 0;
-}
-
-.h2c-rail__orb {
-  margin-bottom: 10px;
 }
 
 .h2c-rail__foot {
@@ -480,10 +536,12 @@
 /* main column */
 
 .h2c-main {
-  flex: 1;
   display: flex;
   flex-direction: column;
+  /* both needed so the grid item can be smaller than its content and let the
+     thread scroll instead of overflowing */
   min-width: 0;
+  min-height: 0;
 }
 
 .h2c-main__header {
@@ -509,6 +567,50 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-tertiary);
+}
+
+/* Phone-only header controls: hamburger left, profile right. Both are hidden
+   on desktop, where the sidebar is always present and carries them. */
+.h2c-menubtn {
+  display: none;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  margin-left: -6px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.h2c-menubtn:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.h2c-header-avatar {
+  display: none;
+  margin-left: auto;
+}
+
+/* dismiss layer behind the phone drawer */
+.h2c-scrim {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  padding: 0;
+  border: none;
+  background: rgba(10, 10, 11, 0.6);
+  backdrop-filter: blur(var(--blur-scrim));
+  -webkit-backdrop-filter: blur(var(--blur-scrim));
+  cursor: pointer;
 }
 
 /* thread */
@@ -575,11 +677,13 @@
   background: radial-gradient(circle at 35% 30%, #bfeaf7 0%, #5cc8e8 45%, #2b8caa 100%);
 }
 
+/* Markdown-rendered. No `white-space: pre-wrap` here — the renderer already
+   turns blank lines into blocks, and preserving them too would double every
+   paragraph gap. */
 .h2c-msg-assistant__text {
   max-width: min(600px, 92%);
   color: var(--text-primary);
   font: 400 16px/1.65 var(--font-sans);
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
@@ -587,8 +691,143 @@
   color: var(--text-danger);
 }
 
-.h2c-caret {
+/* typing caret, on the last block so it sits inline with the text */
+.h2c-msg-assistant__text.is-typing > :last-child::after {
+  content: '▍';
+  margin-left: 1px;
   animation: h2c-caret 1s steps(1) infinite;
+}
+
+/* ---- markdown blocks ---- */
+
+.h2c-msg-assistant__text > :first-child {
+  margin-top: 0;
+}
+
+.h2c-msg-assistant__text > :last-child {
+  margin-bottom: 0;
+}
+
+.h2c-msg-assistant__text p {
+  margin: 0 0 0.75em;
+}
+
+.h2c-msg-assistant__text strong {
+  font-weight: 600;
+}
+
+.h2c-msg-assistant__text em {
+  font-style: italic;
+}
+
+.h2c-msg-assistant__text h1,
+.h2c-msg-assistant__text h2,
+.h2c-msg-assistant__text h3,
+.h2c-msg-assistant__text h4 {
+  margin: 1.2em 0 0.5em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.h2c-msg-assistant__text h1 {
+  font-size: 1.3em;
+}
+
+.h2c-msg-assistant__text h2 {
+  font-size: 1.18em;
+}
+
+.h2c-msg-assistant__text h3,
+.h2c-msg-assistant__text h4 {
+  font-size: 1.05em;
+}
+
+.h2c-msg-assistant__text ul,
+.h2c-msg-assistant__text ol {
+  margin: 0.6em 0;
+  padding-left: 1.35em;
+}
+
+.h2c-msg-assistant__text li {
+  margin: 0.3em 0;
+}
+
+.h2c-msg-assistant__text li::marker {
+  color: var(--text-tertiary);
+}
+
+.h2c-msg-assistant__text li > p {
+  margin: 0;
+}
+
+.h2c-msg-assistant__text a {
+  color: var(--text-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.h2c-msg-assistant__text blockquote {
+  margin: 0.7em 0;
+  padding-left: 14px;
+  border-left: 2px solid var(--border-default);
+  color: var(--text-secondary);
+}
+
+.h2c-msg-assistant__text hr {
+  margin: 1.1em 0;
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.h2c-msg-assistant__text code {
+  padding: 0.12em 0.36em;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  font: 400 0.88em/1.4 var(--font-mono);
+  color: var(--emerald-100);
+}
+
+.h2c-msg-assistant__text pre {
+  margin: 0.7em 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.04);
+  overflow-x: auto;
+}
+
+/* inside a block, the code element is just the text layer */
+.h2c-msg-assistant__text pre code {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--text-primary);
+  font-size: 0.85em;
+  white-space: pre;
+}
+
+.h2c-msg-assistant__text table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin: 0.7em 0;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.92em;
+}
+
+.h2c-msg-assistant__text th,
+.h2c-msg-assistant__text td {
+  padding: 7px 12px;
+  border: 1px solid var(--border-subtle);
+  text-align: left;
+}
+
+.h2c-msg-assistant__text th {
+  background: var(--surface-2);
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .h2c-empty {
@@ -637,7 +876,10 @@
   /* keep in lockstep with startTop in App.jsx — the drop distance is derived
      from it, so the resting chat position stays put when this changes */
   top: max(36%, calc(14% + 195px));
-  transform: translateX(-50%) translateY(calc(var(--p, 0) * var(--drop, 40vh)));
+  /* centred on the viewport at the hero, sliding to the centre of the thread
+     column (which starts after the rail) as the chat fades in */
+  transform: translateX(calc(-50% + var(--rail, 0px) / 2 * var(--chat-vis, 0)))
+    translateY(calc(var(--p, 0) * var(--drop, 40vh)));
   width: min(680px, 94vw);
   display: flex;
   flex-direction: column;
@@ -659,6 +901,8 @@
   pointer-events: var(--chat-pe, none);
 }
 
+/* Solid, not transparent — these sit directly over the binary-wave field and
+   need their own ground to stay legible. */
 .h2c-mode {
   display: flex;
   align-items: center;
@@ -666,7 +910,7 @@
   padding: 6px 12px;
   border: none;
   border-radius: var(--radius-pill);
-  background: transparent;
+  background: var(--surface-2);
   color: var(--text-secondary);
   font: 500 13px/1.3 var(--font-sans);
   letter-spacing: -0.01em;
@@ -774,12 +1018,49 @@
  * responsive
  * ------------------------------------------------------------------ */
 
-@media (max-width: 760px) {
-  /* the rail still fits; the expanded panel would swallow the screen */
-  .h2c-sidebar:not(.is-collapsed) {
+/* Under 960 the composer's left edge (vw/2 - 188px) crosses the 264px panel,
+   so the sidebar stops taking layout width and becomes an overlay drawer
+   opened from the hamburger. Keep in step with DRAWER_QUERY in App.jsx. */
+@media (max-width: 959px) {
+  .h2c-root[data-sidebar='collapsed'],
+  .h2c-root[data-sidebar='expanded'] {
+    --rail: 0px;
+  }
+
+  /* the 60px icon rail belongs to the wide layout only */
+  .h2c-sidebar.is-collapsed {
     display: none;
   }
 
+  .h2c-sidebar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    width: 264px;
+    transform: translateX(-100%);
+    transition: transform var(--duration-base) var(--ease-emphasized);
+    box-shadow: var(--shadow-overlay);
+  }
+
+  .h2c-root[data-sidebar='expanded'] .h2c-sidebar {
+    transform: translateX(0);
+  }
+
+  .h2c-scrim,
+  .h2c-menubtn,
+  .h2c-header-avatar {
+    display: flex;
+  }
+
+  /* the header has enough to carry with a hamburger and an avatar */
+  .h2c-main__mode {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
   .h2c-hero__title,
   .h2c-hero__sub {
     white-space: normal;
@@ -800,4 +1081,29 @@
   .h2c-msg-assistant__orb::before {
     animation: none;
   }
+}
+
+.h2c-docchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  margin: 0 0 8px 4px;
+  padding: 5px 12px;
+  font-size: 13px;
+  color: var(--text-secondary, #8a8a90);
+  background: rgba(255, 255, 255, 0.04);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+}
+.h2c-docchip__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent, #7c6fff);
+  box-shadow: 0 0 8px var(--accent, #7c6fff);
+}
+.h2c-attach:disabled {
+  opacity: 0.4;
+  cursor: default;
 }

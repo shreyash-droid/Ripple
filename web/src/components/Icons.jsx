@@ -35,6 +35,17 @@ export function ArrowUpIcon({ size = 16 }) {
   )
 }
 
+/** Opens the sidebar as a drawer on narrow screens. */
+export function MenuIcon({ size = 18 }) {
+  return (
+    <Svg size={size} strokeWidth={1.7}>
+      <path d="M4 7h16" />
+      <path d="M4 12h16" />
+      <path d="M4 17h16" />
+    </Svg>
+  )
+}
+
 /** Collapse / expand the sidebar rail. */
 export function PanelLeftIcon({ size = 17 }) {
   return (

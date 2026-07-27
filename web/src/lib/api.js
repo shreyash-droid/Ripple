@@ -36,3 +36,17 @@ export function sendChat({ message, mode, conversationId }) {
     body: JSON.stringify({ message, mode, conversationId: conversationId ?? undefined }),
   })
 }
+
+export function ingestDocument({ text, filename }) {
+  return request('/api/ingest', {
+    method: 'POST',
+    body: JSON.stringify({ text, filename }),
+  })
+}
+
+export function askDocument({ question, documentId }) {
+  return request('/api/ask', {
+    method: 'POST',
+    body: JSON.stringify({ question, documentId }),
+  })
+}
