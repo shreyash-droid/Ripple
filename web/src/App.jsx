@@ -111,8 +111,9 @@ export default function App() {
     if (!root) return
     const p = progressRef.current
     const vh = root.clientHeight || window.innerHeight
-    // The composer starts where the CSS `top` puts it and drops to the bottom.
-    // Mirrors the `top` in .h2c-composer.
+    // The composer is bottom-anchored in CSS; --drop is how far above that
+    // resting spot it sits at the hero. Keep startTop in step with the hero
+    // position the design was tuned to.
     const startTop = Math.max(vh * 0.36, vh * 0.14 + 195)
 
     root.style.setProperty('--p', String(p))

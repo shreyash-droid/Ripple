@@ -16,6 +16,7 @@ export default function Composer({
 }) {
   const fieldRef = useRef(null)
   const fileRef = useRef(null)
+  const boxRef = useRef(null)
   const hasDraft = draft.trim().length > 0
 
   useEffect(() => {
@@ -24,6 +25,19 @@ export default function Composer({
     el.style.height = 'auto'
     el.style.height = `${el.scrollHeight}px`
   }, [draft])
+
+  // Publish the composer's real height so the thread can reserve room for it.
+  // It changes with the doc chip and with the textarea wrapping, so a fixed
+  // padding in the thread would either clip messages or waste space.
+  useEffect(() => {
+    const el = boxRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return undefined
+    const ro = new ResizeObserver(() => {
+      document.documentElement.style.setProperty('--composer-h', `${el.offsetHeight}px`)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -40,7 +54,7 @@ export default function Composer({
       : 'Message Ripple'
 
   return (
-    <div className="h2c-composer">
+    <div className="h2c-composer" ref={boxRef}>
       <div className="h2c-modes">
         {modes.map(({ value, label, hint, Icon }) => (
           <button
