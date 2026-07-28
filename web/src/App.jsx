@@ -10,8 +10,10 @@ import { MenuIcon } from './components/Icons'
 import {
   API_BASE,
   askDocument,
+  deleteConversation,
   getMessages,
   listConversations,
+  renameConversation,
   sendChat,
   uploadAndProcess,
 } from './lib/api'
@@ -398,20 +400,55 @@ export default function App() {
     if (found?.mode) setMode(found.mode)
   }
 
-  const newChat = () => {
-    if (isDrawerWidth()) setSidebarCollapsed(true)
+  // Everything that makes the thread show a conversation. Shared by "new chat"
+  // and by deleting the conversation currently on screen, which has to land in
+  // the same empty state rather than on a thread whose rows no longer exist.
+  const clearActiveThread = () => {
     writeRoute(null)
     cancelReveal()
     setLoading(false)
     loadedIdRef.current = null
     setActiveId(null)
     setMessages([])
-    setDraft('')
-    // reset document context on a fresh chat, poll included
+    // reset document context too, poll included
     uploadAbortRef.current?.abort()
     setDocumentId(null)
     setDocName(null)
     setDocState('idle')
+  }
+
+  const newChat = () => {
+    if (isDrawerWidth()) setSidebarCollapsed(true)
+    clearActiveThread()
+    setDraft('')
+  }
+
+  /* Rename and delete are optimistic: both are instant in the sidebar and rolled
+     back if the request fails. The alternative — waiting on a round trip before
+     the row changes — makes the sidebar feel broken on a slow connection, and
+     the failure case here is rare and recoverable. */
+  const renameChat = async (id, title) => {
+    const before = conversations
+    setConversations((cs) => cs.map((c) => (c.id === id ? { ...c, title } : c)))
+    try {
+      await renameConversation(id, title)
+    } catch {
+      setConversations(before)
+    }
+  }
+
+  const deleteChat = async (id) => {
+    const before = conversations
+    setConversations((cs) => cs.filter((c) => c.id !== id))
+    if (id === activeId) clearActiveThread()
+
+    try {
+      await deleteConversation(id)
+    } catch {
+      // put the row back; the thread stays cleared, which is recoverable by
+      // clicking it again, whereas a half-deleted sidebar is not
+      setConversations(before)
+    }
   }
 
   const activeConversation = conversations.find((c) => c.id === activeId)
@@ -460,6 +497,8 @@ export default function App() {
               onSelect={selectConversation}
               onNewChat={newChat}
               onHome={goHome}
+              onRename={renameChat}
+              onDelete={deleteChat}
               user={USER}
               collapsed={sidebarCollapsed}
               onToggle={() => setSidebarCollapsed((v) => !v)}

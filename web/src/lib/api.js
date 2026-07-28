@@ -30,6 +30,17 @@ export function getMessages(conversationId) {
   return request(`/api/conversations/${conversationId}/messages`).then((d) => d.messages || [])
 }
 
+export function renameConversation(conversationId, title) {
+  return request(`/api/conversations/${conversationId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ title }),
+  }).then((d) => d.conversation)
+}
+
+export function deleteConversation(conversationId) {
+  return request(`/api/conversations/${conversationId}`, { method: 'DELETE' })
+}
+
 export function sendChat({ message, mode, conversationId }) {
   return request('/api/chat', {
     method: 'POST',

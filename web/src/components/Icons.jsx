@@ -56,6 +56,39 @@ export function PanelLeftIcon({ size = 17 }) {
   )
 }
 
+/* ---- conversation row actions ---- */
+
+/** Opens a conversation's rename / delete menu. */
+export function MoreIcon({ size = 15 }) {
+  return (
+    <Svg size={size}>
+      {/* dots, not strokes — the shared Svg sets fill="none", so say otherwise */}
+      <circle cx="5" cy="12" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="19" cy="12" r="1.3" fill="currentColor" stroke="none" />
+    </Svg>
+  )
+}
+
+export function PencilIcon({ size = 14 }) {
+  return (
+    <Svg size={size} strokeWidth={1.6}>
+      <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z" />
+      <path d="m14.5 7.5 3 3" />
+    </Svg>
+  )
+}
+
+export function TrashIcon({ size = 14 }) {
+  return (
+    <Svg size={size} strokeWidth={1.6}>
+      <path d="M4 7h16" />
+      <path d="M9.5 7V5.5a1.5 1.5 0 0 1 1.5-1.5h2a1.5 1.5 0 0 1 1.5 1.5V7" />
+      <path d="M6.5 7.5 7.4 19a1.6 1.6 0 0 0 1.6 1.5h6a1.6 1.6 0 0 0 1.6-1.5l.9-11.5" />
+    </Svg>
+  )
+}
+
 /* ---- mode glyphs ---- */
 
 /** General — a spark. */
