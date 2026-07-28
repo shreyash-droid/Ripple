@@ -1,7 +1,11 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import EmptyState from './EmptyState'
+import Scorecard from './Scorecard'
+import Sources from './Sources'
 import { useTypewriter } from '../hooks/useTypewriter'
+import { collectScorecards, previousOverall } from '../lib/scoring'
 
 const LOADER_LABEL = 'Generating'
 
@@ -13,7 +17,7 @@ function prefersReducedMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 }
 
-function AssistantMessage({ message, animate, onRevealDone }) {
+function AssistantMessage({ message, animate, onRevealDone, scorecard, scoreLabel, previous }) {
   // The hook is called unconditionally and `animate` decides whether it types
   // — calling it conditionally would change the hook count between renders.
   const typing = animate && !prefersReducedMotion()
@@ -37,8 +41,18 @@ function AssistantMessage({ message, animate, onRevealDone }) {
   return (
     <div className="h2c-msg-assistant">
       <div className="h2c-msg-assistant__orb" />
-      <div className={cls}>
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayed}</ReactMarkdown>
+      <div className="h2c-msg-assistant__body">
+        {/* The verdict lands before the reasoning: the card is the result of the
+            turn, so it appears whole while the feedback below it is still typing. */}
+        {scorecard && (
+          <Scorecard scorecard={scorecard} label={scoreLabel} previous={previous} />
+        )}
+        <div className={cls}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayed}</ReactMarkdown>
+        </div>
+        {/* Citations are the answer's footnotes — held back until there is a
+            finished answer for them to be footnotes to. */}
+        {done && <Sources sources={message.sources} />}
       </div>
     </div>
   )
@@ -59,9 +73,25 @@ function Loader() {
   )
 }
 
-export default function Thread({ messages, loading, animatingId, onRevealDone, emptyHint }) {
+export default function Thread({
+  messages,
+  loading,
+  animatingId,
+  onRevealDone,
+  empty,
+  onStarter,
+  scoreLabel,
+}) {
   const scrollRef = useRef(null)
   const innerRef = useRef(null)
+
+  // Scored turns in order, so each card can show its delta against the one before
+  // it — which is the previous *scored* turn, not the previous message.
+  const scorecards = useMemo(() => collectScorecards(messages), [messages])
+  const cardById = useMemo(
+    () => new Map(scorecards.map((s) => [s.id, s.scorecard])),
+    [scorecards],
+  )
 
   // Jump to the bottom when the list itself changes.
   useEffect(() => {
@@ -88,7 +118,9 @@ export default function Thread({ messages, loading, animatingId, onRevealDone, e
   return (
     <div className="h2c-thread" ref={scrollRef}>
       <div className="h2c-thread__inner" ref={innerRef}>
-        {messages.length === 0 && !loading && <div className="h2c-empty">{emptyHint}</div>}
+        {messages.length === 0 && !loading && (
+          <EmptyState empty={empty} onStarter={onStarter} />
+        )}
 
         {messages.map((m, i) =>
           m.role === 'user' ? (
@@ -101,6 +133,9 @@ export default function Thread({ messages, loading, animatingId, onRevealDone, e
               message={m}
               animate={m.id != null && m.id === animatingId}
               onRevealDone={onRevealDone}
+              scorecard={cardById.get(m.id) ?? null}
+              scoreLabel={scoreLabel}
+              previous={previousOverall(scorecards, m.id)}
             />
           ),
         )}

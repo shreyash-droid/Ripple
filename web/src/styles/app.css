@@ -102,6 +102,17 @@
   }
 }
 
+/* Rubric meters. scaleX rather than width so four bars filling at once cost no
+   layout; the inline width is the target, this only animates up to it. */
+@keyframes h2c-meter-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 /* ------------------------------------------------------------------ *
  * stage
  * ------------------------------------------------------------------ */
@@ -688,11 +699,21 @@
   background: radial-gradient(circle at 35% 30%, #bfeaf7 0%, #5cc8e8 45%, #2b8caa 100%);
 }
 
+/* A reply is no longer only prose: a scored turn stacks a rubric card above the
+   text and a document answer stacks its citations below it. The column owns the
+   measure so all three line up on the same left and right edges.
+   `min-width: 0` because a <pre> inside would otherwise refuse to shrink and
+   push the whole flex row wider than the thread. */
+.h2c-msg-assistant__body {
+  flex: 1;
+  min-width: 0;
+  max-width: min(600px, 92%);
+}
+
 /* Markdown-rendered. No `white-space: pre-wrap` here — the renderer already
    turns blank lines into blocks, and preserving them too would double every
    paragraph gap. */
 .h2c-msg-assistant__text {
-  max-width: min(600px, 92%);
   color: var(--text-primary);
   font: 400 16px/1.65 var(--font-sans);
   overflow-wrap: anywhere;
@@ -841,11 +862,57 @@
   color: var(--text-primary);
 }
 
+/* Mode-specific empty state. This is the only place a mode explains its own
+   workflow before you have committed to it, so it gets real hierarchy — a claim,
+   the mechanics under it, and a way in — rather than the one muted italic line
+   that used to serve all four. */
 .h2c-empty {
   text-align: center;
-  color: var(--text-tertiary);
-  font: italic 400 15px/1.6 var(--font-sans);
-  padding: 40px 0;
+  padding: 40px 0 24px;
+}
+
+.h2c-empty__title {
+  margin: 0;
+  color: var(--text-primary);
+  font: 500 24px/1.25 var(--font-display);
+  letter-spacing: var(--tracking-tight);
+}
+
+.h2c-empty__body {
+  margin: 12px auto 0;
+  max-width: 46ch;
+  color: var(--text-secondary);
+  font: 400 14.5px/1.65 var(--font-sans);
+}
+
+.h2c-empty__starters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+/* Sends on click rather than filling the box: these are the opening move of a
+   workflow, not a draft to edit. */
+.h2c-starter {
+  padding: 8px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font: 400 13px/1.3 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    background var(--duration-fast) var(--ease-standard);
+}
+
+.h2c-starter:hover {
+  border-color: var(--border-accent);
+  background: var(--surface-2);
+  color: var(--text-primary);
 }
 
 /* loader */
@@ -952,13 +1019,18 @@
   opacity: 1;
 }
 
+/* A fixed radius, not --radius-pill. A pill radius resolves to half the box
+   height, so it stayed a pill at one line but ballooned into an ~80px curve
+   once the textarea grew — which then ate the corners the + button and the
+   first and last lines of text sit in. This holds the same corner at 58px and
+   at 220px. */
 .h2c-inputbar {
   display: flex;
   align-items: flex-end;
   gap: 8px;
   width: min(640px, 100%);
   padding: 10px 10px 10px 10px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-xl);
   background: rgba(22, 22, 24, 0.85);
   backdrop-filter: blur(var(--blur-panel));
   -webkit-backdrop-filter: blur(var(--blur-panel));
@@ -995,8 +1067,36 @@
   outline: none;
   color: var(--text-primary);
   font: 400 16px/1.5 var(--font-sans);
-  padding: 8px 0;
-  max-height: 160px;
+  /* right padding keeps the last word off the scrollbar once one appears */
+  padding: 8px 6px 8px 0;
+  /* ~8 lines before it scrolls. The composer publishes its measured height, so
+     the thread reserves the extra room rather than hiding behind it. */
+  max-height: 220px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+/* The default scrollbar is a light slab against a near-black composer. Same bar,
+   in the panel's own palette. */
+.h2c-inputbar__field::-webkit-scrollbar {
+  width: 10px;
+}
+
+.h2c-inputbar__field::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.h2c-inputbar__field::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.18);
+  /* the transparent border is padding the thumb, not framing it */
+  background-clip: content-box;
+}
+
+.h2c-inputbar__field::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+  background-clip: content-box;
 }
 
 .h2c-inputbar__field::placeholder {
@@ -1027,6 +1127,341 @@
 
 .h2c-send.is-ready:hover {
   background: var(--surface-accent-hover);
+}
+
+/* ------------------------------------------------------------------ *
+ * scoring — rubric card + session trend
+ * ------------------------------------------------------------------ */
+
+/* One tone scale for both. Three bands rather than a gradient: the number is
+   already precise, so colour is here to be read at a glance, and a continuous
+   ramp reads as "some shade of teal" at these sizes. Set as a variable so a
+   score, its meter and its delta can all be painted from one lookup. */
+.h2c-score [data-tone='high'],
+.h2c-session [data-tone='high'] {
+  --tone: var(--emerald-500);
+}
+
+.h2c-score [data-tone='mid'],
+.h2c-session [data-tone='mid'] {
+  --tone: var(--amber-500);
+}
+
+.h2c-score [data-tone='low'],
+.h2c-session [data-tone='low'] {
+  --tone: var(--red-500);
+}
+
+.h2c-score {
+  margin-bottom: 16px;
+  padding: 14px 16px 15px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-card);
+}
+
+.h2c-score__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.h2c-score__label {
+  color: var(--text-tertiary);
+  font: var(--text-caption);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+
+/* pushed to the right edge, opposite the label */
+.h2c-score__overall {
+  margin-left: auto;
+  color: var(--tone, var(--text-primary));
+  font: 500 22px/1 var(--font-sans);
+  letter-spacing: var(--tracking-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.h2c-score__outof {
+  margin-left: 1px;
+  color: var(--text-tertiary);
+  font: 500 12px/1 var(--font-sans);
+}
+
+/* Two columns: four criteria in one column made the card taller than the
+   feedback it introduces, which inverted what the turn is about. */
+.h2c-score__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 20px;
+}
+
+.h2c-score__cellhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.h2c-score__name {
+  color: var(--text-secondary);
+  font: 500 12.5px/1.3 var(--font-sans);
+}
+
+.h2c-score__val {
+  color: var(--tone, var(--text-primary));
+  font: 600 12.5px/1.3 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+.h2c-score__meter {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.h2c-score__meter i {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--tone, var(--surface-accent));
+  transform-origin: left center;
+  /* the card mounts before the reply finishes typing, so the bars fill in as
+     the feedback arrives rather than being there the whole time */
+  animation: h2c-meter-fill var(--duration-slow) var(--ease-emphasized) both;
+}
+
+.h2c-score__note {
+  margin: 7px 0 0;
+  color: var(--text-tertiary);
+  font: 400 11.5px/1.5 var(--font-sans);
+}
+
+/* ---- delta chips (shared shape, both places) ---- */
+
+.h2c-score__delta,
+.h2c-session__delta,
+.h2c-session__cdelta {
+  color: var(--text-tertiary);
+  font: 500 11.5px/1.3 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Down is amber, not red: a dip in one answer is a signal, not a failure — and
+   red here would compete with the low-score tone for a different meaning. */
+.h2c-score [data-dir='up'],
+.h2c-session [data-dir='up'] {
+  color: var(--emerald-500);
+}
+
+.h2c-score [data-dir='down'],
+.h2c-session [data-dir='down'] {
+  color: var(--amber-500);
+}
+
+/* the unit, not the number — muted so the delta itself carries */
+.h2c-score__delta-of,
+.h2c-session__delta-of {
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+/* ---- session trend strip ---- */
+
+/* Sits between the header and the thread, on the thread's own measure so the
+   numbers line up with the cards they summarise. The +40px matches the thread's
+   own 20px gutters, so it is the *content* edges that align, not the boxes. */
+.h2c-session {
+  flex-shrink: 0;
+  width: min(calc(var(--container-chat) + 40px), 100%);
+  margin: 0 auto;
+  padding: 12px 20px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.h2c-session__main {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.h2c-session__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: var(--radius-pill);
+  background: #132c36;
+  color: var(--emerald-300);
+  font: var(--text-caption);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+
+.h2c-session__spark polyline {
+  fill: none;
+  stroke: var(--emerald-500);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.75;
+}
+
+.h2c-session__spark circle {
+  fill: var(--emerald-500);
+  opacity: 0.45;
+}
+
+/* where the session stands right now */
+.h2c-session__spark circle[data-last='true'] {
+  opacity: 1;
+}
+
+.h2c-session__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+}
+
+.h2c-session__stats div {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.h2c-session__stats dt {
+  color: var(--text-tertiary);
+  font: var(--text-caption);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-label);
+}
+
+.h2c-session__stats dd {
+  margin: 0;
+  color: var(--tone, var(--text-primary));
+  font: 500 13px/1.3 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+/* the headline number of the strip, so it gets the right edge to itself */
+.h2c-session__delta {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 12.5px;
+}
+
+.h2c-session__criteria {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.h2c-session__criteria li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 9px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+}
+
+.h2c-session__cname {
+  color: var(--text-secondary);
+  font: 400 11.5px/1.4 var(--font-sans);
+}
+
+.h2c-session__cval {
+  color: var(--tone, var(--text-primary));
+  font: 600 11.5px/1.4 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ *
+ * document citations
+ * ------------------------------------------------------------------ */
+
+.h2c-sources {
+  margin-top: 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.h2c-sources summary {
+  padding: 9px 13px;
+  color: var(--text-secondary);
+  font: 500 12.5px/1.3 var(--font-sans);
+  cursor: pointer;
+  list-style: none;
+}
+
+.h2c-sources summary::-webkit-details-marker {
+  display: none;
+}
+
+/* own disclosure triangle, so it matches the rest of the chrome */
+.h2c-sources summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 7px;
+  color: var(--text-tertiary);
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.h2c-sources[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.h2c-sources summary:hover {
+  color: var(--text-primary);
+}
+
+.h2c-sources__list {
+  margin: 0;
+  padding: 0 13px 4px;
+  list-style: none;
+}
+
+.h2c-sources__list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 9px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* matches the [1] markers the answer cites inline */
+.h2c-sources__marker {
+  color: var(--text-accent);
+  font: 400 11.5px/1.55 var(--font-mono);
+}
+
+.h2c-sources__excerpt {
+  color: var(--text-secondary);
+  font: 400 12.5px/1.55 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.h2c-sources__score {
+  color: var(--text-tertiary);
+  font: 400 11px/1.6 var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ------------------------------------------------------------------ *
@@ -1153,9 +1588,29 @@
     gap: 10px;
   }
 
-  .h2c-msg-assistant__text {
+  .h2c-msg-assistant__body {
     max-width: 100%;
+  }
+
+  .h2c-msg-assistant__text {
     font-size: 15px;
+  }
+
+  /* A four-row card is fine on a phone; two 130px-wide columns are not — the
+     criterion names wrap and the notes turn into a column of single words. */
+  .h2c-score__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .h2c-session {
+    padding: 10px 14px 11px;
+  }
+
+  /* Nothing left to push against once the row wraps, and the auto margin would
+     strand the delta on a line of its own. */
+  .h2c-session__delta {
+    margin-left: 0;
   }
 
   .h2c-composer {
@@ -1201,6 +1656,14 @@
   .h2c-root[data-sidebar='expanded'] .h2c-sidebar,
   .h2c-docchip.is-processing .h2c-docchip__dot {
     animation: none;
+  }
+
+  /* the bar still has to end up at its inline width, so cancel the fill rather
+     than the animation — `animation: none` would leave it at scaleX(1) anyway,
+     but stating the transform keeps it honest if the keyframes ever change */
+  .h2c-score__meter i {
+    animation: none;
+    transform: scaleX(1);
   }
 }
 

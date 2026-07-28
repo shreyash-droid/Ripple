@@ -86,3 +86,23 @@ export function CodeIcon({ size = 13 }) {
     </Svg>
   )
 }
+
+/** Document Q&A — a page with a folded corner. */
+export function DocIcon({ size = 13 }) {
+  return (
+    <Svg size={size} strokeWidth={1.6}>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5" />
+    </Svg>
+  )
+}
+
+/** Session trend — an upward step. */
+export function TrendIcon({ size = 13 }) {
+  return (
+    <Svg size={size} strokeWidth={1.9}>
+      <path d="M3 17l6-6 4 4 8-8" />
+      <path d="M15 7h6v6" />
+    </Svg>
+  )
+}

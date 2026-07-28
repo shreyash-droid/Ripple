@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import BinaryWaves from './components/BinaryWaves'
 import Composer from './components/Composer'
 import Hero from './components/Hero'
+import SessionProgress from './components/SessionProgress'
 import Sidebar from './components/Sidebar'
 import Thread from './components/Thread'
 import TopBar from './components/TopBar'
-import { CodeIcon, MenuIcon, SparkIcon, TargetIcon } from './components/Icons'
+import { MenuIcon } from './components/Icons'
 import {
   API_BASE,
   askDocument,
@@ -14,31 +15,10 @@ import {
   sendChat,
   uploadAndProcess,
 } from './lib/api'
+import { MODES, modeConfig } from './lib/modes'
+import { collectScorecards, summarizeSession } from './lib/scoring'
 import { extractPdfText } from './lib/pdf'
 import './styles/app.css'
-
-// Mirrors MODE_PROMPTS in backend/lib/llm.js.
-const MODES = [
-  { value: 'general', label: 'General', hint: 'A helpful, friendly assistant', Icon: SparkIcon },
-  {
-    value: 'coach',
-    label: 'Coach',
-    hint: 'Interview coaching with constructive feedback',
-    Icon: TargetIcon,
-  },
-  {
-    value: 'reviewer',
-    label: 'Reviewer',
-    hint: 'Senior code review — bugs, style, improvements',
-    Icon: CodeIcon,
-  },
-  {
-    value: 'document',
-    label: 'Document Q&A',
-    hint: 'Upload a document and ask questions about it',
-    Icon: SparkIcon,
-  },
-]
 
 const USER = { name: 'Maya Chen', initials: 'M' }
 
@@ -298,8 +278,11 @@ export default function App() {
 
   const cancelReveal = () => setAnimatingId(null)
 
-  const send = async () => {
-    const text = draft.trim()
+  /* `override` lets an empty-state starter send its own text without waiting a
+     render for setDraft to land. The send button passes onSend straight to
+     onClick, so a click arrives here as an event — only a string is text. */
+  const send = async (override) => {
+    const text = (typeof override === 'string' ? override : draft).trim()
     if (!text || busy) return
 
     enterChat()
@@ -341,7 +324,19 @@ export default function App() {
         writeRoute(data.conversationId ?? activeId, true)
       }
       const replyId = `assistant-${Date.now()}`
-      setMessages((m) => [...m, { id: replyId, role: 'assistant', content: replyText }])
+      setMessages((m) => [
+        ...m,
+        {
+          id: replyId,
+          role: 'assistant',
+          content: replyText,
+          // The workflow's structured output travels with the message it belongs
+          // to, in the same shape getMessages returns it — so a reply that just
+          // arrived and one restored from history render through one path.
+          scorecard: data.scorecard ?? null,
+          sources: data.sourcesUsed ?? null,
+        },
+      ])
       setLoading(false)
       setAnimatingId(replyId)
       if (mode !== 'document') refreshConversations()
@@ -421,6 +416,13 @@ export default function App() {
 
   const activeConversation = conversations.find((c) => c.id === activeId)
   const title = activeConversation?.title || 'New chat'
+  const config = modeConfig(mode)
+
+  /* Derived, not stored: every scored turn carries its own card, so the session
+     trend is a fold over the thread. Reopening a conversation therefore restores
+     the trend for free, and a turn the model failed to score simply doesn't
+     contribute rather than leaving a gap in a running counter. */
+  const session = useMemo(() => summarizeSession(collectScorecards(messages)), [messages])
 
   return (
     <div
@@ -474,18 +476,29 @@ export default function App() {
                   <MenuIcon />
                 </button>
                 <span className="h2c-main__title">{title}</span>
-                <span className="h2c-main__mode">{MODES.find((m) => m.value === mode)?.label}</span>
+                <span className="h2c-main__mode">{config.label}</span>
                 <button type="button" className="h2c-avatar h2c-header-avatar" aria-label="Account">
                   {USER.initials}
                 </button>
               </div>
+
+              {/* Only the evaluative modes ever produce one, so an ordinary chat
+                  never carries scoring chrome it has no use for. */}
+              {session && (
+                <SessionProgress
+                  summary={session}
+                  subject={mode === 'reviewer' ? 'reviews' : 'answers'}
+                />
+              )}
 
               <Thread
                 messages={messages}
                 loading={loading}
                 animatingId={animatingId}
                 onRevealDone={handleRevealDone}
-                emptyHint="Ask anything — pick a mode below to shape how Ripple answers."
+                empty={config.empty}
+                onStarter={send}
+                scoreLabel={config.scoreLabel}
               />
             </div>
           </div>

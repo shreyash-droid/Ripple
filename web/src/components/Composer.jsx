@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { ArrowUpIcon, PlusIcon } from './Icons'
+import { modeConfig } from '../lib/modes'
 
 export default function Composer({
   draft,
@@ -55,13 +56,16 @@ export default function Composer({
     failed: 'Upload the document again',
   }
 
-  // On the landing page the mode pills are hidden too, so the composer reads as
-  // a plain entry point — naming the loaded document there would be the same
-  // leak as the chip above.
-  const placeholder =
-    mode === 'document' && entered
-      ? DOC_PLACEHOLDERS[docState] || 'Upload a document to begin'
-      : 'Message Ripple'
+  /* On the landing page the mode pills are hidden too, so the composer reads as
+     a plain entry point — naming the loaded document, or prompting for code,
+     would be the same leak as the chip above. Inside the chat the placeholder is
+     the mode's, since what you are expected to type differs sharply between
+     "message Ripple" and "answer as you would in the room". */
+  const placeholder = !entered
+    ? 'Message Ripple'
+    : mode === 'document'
+      ? DOC_PLACEHOLDERS[docState] || modeConfig(mode).placeholder
+      : modeConfig(mode).placeholder
 
   return (
     <div className="h2c-composer" ref={boxRef}>
