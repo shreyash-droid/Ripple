@@ -12,7 +12,7 @@ export default function Composer({
   showUpload,
   onUpload,
   docName,
-  ingesting,
+  docState = 'idle',
 }) {
   const fieldRef = useRef(null)
   const fileRef = useRef(null)
@@ -46,11 +46,17 @@ export default function Composer({
     }
   }
 
+  // Ingestion is queued, so a named document is not yet an answerable one —
+  // the placeholder has to say which of the two the user is looking at.
+  const DOC_PLACEHOLDERS = {
+    processing: `Processing ${docName}…`,
+    ready: `Ask about ${docName}`,
+    failed: 'Upload the document again',
+  }
+
   const placeholder =
     mode === 'document'
-      ? docName
-        ? `Ask about ${docName}`
-        : 'Upload a document to begin'
+      ? DOC_PLACEHOLDERS[docState] || 'Upload a document to begin'
       : 'Message Ripple'
 
   return (
@@ -71,9 +77,13 @@ export default function Composer({
       </div>
 
       {showUpload && docName && (
-        <div className="h2c-docchip">
+        <div className={`h2c-docchip is-${docState}`}>
           <span className="h2c-docchip__dot" />
-          {ingesting ? `Processing ${docName}…` : docName}
+          {docState === 'processing'
+            ? `Processing ${docName}…`
+            : docState === 'failed'
+              ? `Couldn't process ${docName}`
+              : docName}
         </div>
       )}
 
@@ -96,7 +106,7 @@ export default function Composer({
               aria-label="Upload a document"
               title="Upload a document"
               onClick={() => fileRef.current?.click()}
-              disabled={ingesting}
+              disabled={docState === 'processing'}
             >
               <PlusIcon size={17} />
             </button>

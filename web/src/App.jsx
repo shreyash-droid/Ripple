@@ -6,7 +6,14 @@ import Sidebar from './components/Sidebar'
 import Thread from './components/Thread'
 import TopBar from './components/TopBar'
 import { CodeIcon, MenuIcon, SparkIcon, TargetIcon } from './components/Icons'
-import { askDocument, getMessages, ingestDocument, listConversations, sendChat } from './lib/api'
+import {
+  API_BASE,
+  askDocument,
+  getMessages,
+  listConversations,
+  sendChat,
+  uploadAndProcess,
+} from './lib/api'
 import { extractPdfText } from './lib/pdf'
 import './styles/app.css'
 
@@ -75,9 +82,13 @@ export default function App() {
   const loadedIdRef = useRef(null)
   const enterRafRef = useRef(0)
 
+  // Ingestion is queued and worked off asynchronously, so a document is not
+  // answerable the moment the upload returns. docState tracks the worker.
   const [documentId, setDocumentId] = useState(null)
   const [docName, setDocName] = useState(null)
-  const [ingesting, setIngesting] = useState(false)
+  const [docState, setDocState] = useState('idle') // idle | processing | ready | failed
+  // lets a superseding upload, a new chat, or an unmount call off the poll
+  const uploadAbortRef = useRef(null)
 
   const [conversations, setConversations] = useState([])
   // restored from the URL so a reload lands back in the conversation
@@ -100,7 +111,8 @@ export default function App() {
     activeIdRef.current = activeId
   }, [activeId])
 
-  const busy = loading || animatingId !== null
+  // the ask box stays locked until the worker has finished with the document
+  const busy = loading || animatingId !== null || (mode === 'document' && docState === 'processing')
 
   /* ---------------------------------------------------------------- *
    * scroll-driven transition
@@ -220,6 +232,8 @@ export default function App() {
 
   useEffect(() => () => cancelAnimationFrame(enterRafRef.current), [])
 
+  useEffect(() => () => uploadAbortRef.current?.abort(), [])
+
   // The sidebar logo is the only way back to the landing page.
   const goHome = () => {
     cancelAnimationFrame(enterRafRef.current)
@@ -297,9 +311,21 @@ export default function App() {
     try {
       let data, replyText
       if (mode === 'document') {
-        if (!documentId) {
+        // Only `ready` means the worker has stored the embeddings; asking any
+        // earlier retrieves nothing and the answer is confidently empty.
+        if (docState !== 'ready' || !documentId) {
           setLoading(false)
-          setMessages((m) => [...m, { id: `sys-${Date.now()}`, role: 'assistant', content: 'Upload a document first, then ask your question.' }])
+          setMessages((m) => [
+            ...m,
+            {
+              id: `sys-${Date.now()}`,
+              role: 'assistant',
+              content:
+                docState === 'failed'
+                  ? `I couldn't process ${docName}. Try uploading it again.`
+                  : 'Upload a document first, then ask your question.',
+            },
+          ])
           return
         }
         data = await askDocument({ question: text, documentId })
@@ -327,15 +353,28 @@ export default function App() {
 
   const handleUpload = async (file) => {
     if (!file) return
-    setIngesting(true)
+
+    // a second upload supersedes one still being embedded
+    uploadAbortRef.current?.abort()
+    const controller = new AbortController()
+    uploadAbortRef.current = controller
+
+    // the old document stops being askable the moment a new one is picked
+    setDocumentId(null)
     setDocName(file.name)
+    setDocState('processing')
+
     try {
       const text =
         file.type === 'application/pdf'
           ? await extractPdfText(file)
           : await file.text() // plain .txt fallback
-      const data = await ingestDocument({ text, filename: file.name })
-      setDocumentId(data.documentId)
+
+      // resolves only once the worker has chunked, embedded and stored it
+      const id = await uploadAndProcess(text, file.name, API_BASE, { signal: controller.signal })
+
+      setDocumentId(id)
+      setDocState('ready')
       setMessages((m) => [
         ...m,
         {
@@ -345,10 +384,9 @@ export default function App() {
         },
       ])
     } catch (err) {
-      setDocName(null)
+      if (err.name === 'AbortError') return // superseded; the newer upload owns the state
+      setDocState('failed')
       setMessages((m) => [...m, errorMessage(err)])
-    } finally {
-      setIngesting(false)
     }
   }
 
@@ -374,9 +412,11 @@ export default function App() {
     setActiveId(null)
     setMessages([])
     setDraft('')
-    // reset document context on a fresh chat
+    // reset document context on a fresh chat, poll included
+    uploadAbortRef.current?.abort()
     setDocumentId(null)
     setDocName(null)
+    setDocState('idle')
   }
 
   const activeConversation = conversations.find((c) => c.id === activeId)
@@ -457,11 +497,11 @@ export default function App() {
             modes={MODES}
             mode={mode}
             onModeChange={setMode}
-            busy={busy || ingesting}
+            busy={busy}
             showUpload={mode === 'document'}
             onUpload={handleUpload}
             docName={docName}
-            ingesting={ingesting}
+            docState={docState}
           />
         </div>
       </div>

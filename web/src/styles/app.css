@@ -83,6 +83,15 @@
   }
 }
 
+@keyframes h2c-drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
 @keyframes h2c-caret {
   0%,
   100% {
@@ -1033,6 +1042,15 @@
     --rail: 0px;
   }
 
+  /* The sidebar leaves the flow here — collapsed it is display:none, expanded
+     it is an absolutely positioned drawer — so .h2c-main becomes the only grid
+     item and auto-places into the first track. That track is the rail, now 0px
+     wide, which collapsed the whole chat to nothing against the left edge.
+     One track, so main owns the row whatever the sidebar is doing. */
+  .h2c-chat {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   /* the 60px icon rail belongs to the wide layout only */
   .h2c-sidebar.is-collapsed {
     display: none;
@@ -1044,14 +1062,28 @@
     bottom: 0;
     left: 0;
     z-index: 30;
-    width: 264px;
+    width: min(264px, 82vw);
     transform: translateX(-100%);
     transition: transform var(--duration-base) var(--ease-emphasized);
     box-shadow: var(--shadow-overlay);
   }
 
+  /* the fixed widths above exist so the desktop rail can slide over the panel
+     like a curtain; the drawer sizes itself, so its contents just fill it */
+  .h2c-sidebar__head,
+  .h2c-sidebar__new,
+  .h2c-sidebar__label,
+  .h2c-sidebar__list,
+  .h2c-sidebar__user {
+    width: 100%;
+  }
+
+  /* The collapsed and expanded sidebars are different trees, so the drawer is
+     newly mounted at translateX(0) and the transition above has nothing to run
+     from. Animate the mount instead. */
   .h2c-root[data-sidebar='expanded'] .h2c-sidebar {
     transform: translateX(0);
+    animation: h2c-drawer-in var(--duration-base) var(--ease-emphasized) both;
   }
 
   .h2c-scrim,
@@ -1064,12 +1096,93 @@
   .h2c-main__mode {
     display: none;
   }
+
+  /* The composer is a sibling of .h2c-chat and paints above it (the chat layer
+     is its own stacking context at z-index auto), so it would sit on top of the
+     drawer and its scrim. Retire it while the drawer is open. */
+  .h2c-composer {
+    transition: opacity var(--duration-base) var(--ease-standard);
+  }
+
+  .h2c-root[data-sidebar='expanded'] .h2c-composer {
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 @media (max-width: 760px) {
   .h2c-hero__title,
   .h2c-hero__sub {
     white-space: normal;
+  }
+}
+
+/* ---- phone ---- */
+
+@media (max-width: 640px) {
+  .h2c-topbar {
+    padding: 14px 16px;
+  }
+
+  .h2c-hero {
+    top: 20%;
+    gap: 16px;
+    width: min(760px, 88vw);
+  }
+
+  .h2c-main__header {
+    gap: 8px;
+    padding: 12px 14px;
+  }
+
+  .h2c-thread {
+    padding: 20px 14px calc(var(--composer-h, 130px) + 36px);
+  }
+
+  .h2c-thread__inner {
+    gap: 20px;
+  }
+
+  .h2c-msg-user__bubble {
+    max-width: 92%;
+    padding: 10px 14px;
+    font-size: 15px;
+  }
+
+  .h2c-msg-assistant {
+    gap: 10px;
+  }
+
+  .h2c-msg-assistant__text {
+    max-width: 100%;
+    font-size: 15px;
+  }
+
+  .h2c-composer {
+    width: min(680px, 100vw - 20px);
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    gap: 10px;
+  }
+
+  /* Four pills do not fit a phone. Scroll them sideways rather than wrapping:
+     wrapping would change the composer's height, and the thread reserves its
+     bottom padding from that height. */
+  .h2c-modes {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .h2c-modes::-webkit-scrollbar {
+    display: none;
+  }
+
+  .h2c-mode {
+    flex-shrink: 0;
+  }
+
+  .h2c-inputbar {
+    padding: 8px;
   }
 }
 
@@ -1084,7 +1197,9 @@
   .h2c-ambient__glow,
   .h2c-loader__circle,
   .h2c-loader__label span,
-  .h2c-msg-assistant__orb::before {
+  .h2c-msg-assistant__orb::before,
+  .h2c-root[data-sidebar='expanded'] .h2c-sidebar,
+  .h2c-docchip.is-processing .h2c-docchip__dot {
     animation: none;
   }
 }
@@ -1106,8 +1221,25 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--accent, #7c6fff);
-  box-shadow: 0 0 8px var(--accent, #7c6fff);
+  background: var(--surface-accent);
+  box-shadow: 0 0 8px var(--emerald-glow);
+}
+
+/* the chip is the only standing signal that the worker is still embedding —
+   the pulse is what separates "queued" from "answerable" at a glance */
+.h2c-docchip.is-processing .h2c-docchip__dot {
+  background: var(--amber-500);
+  box-shadow: 0 0 8px rgba(232, 162, 61, 0.5);
+  animation: h2c-orb-pulse 1.4s var(--ease-standard) infinite;
+}
+
+.h2c-docchip.is-failed {
+  color: var(--text-danger);
+}
+
+.h2c-docchip.is-failed .h2c-docchip__dot {
+  background: var(--red-500);
+  box-shadow: 0 0 8px rgba(229, 72, 77, 0.5);
 }
 .h2c-attach:disabled {
   opacity: 0.4;
