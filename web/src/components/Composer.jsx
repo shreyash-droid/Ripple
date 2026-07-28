@@ -13,6 +13,7 @@ export default function Composer({
   onUpload,
   docName,
   docState = 'idle',
+  entered,
 }) {
   const fieldRef = useRef(null)
   const fileRef = useRef(null)
@@ -54,8 +55,11 @@ export default function Composer({
     failed: 'Upload the document again',
   }
 
+  // On the landing page the mode pills are hidden too, so the composer reads as
+  // a plain entry point — naming the loaded document there would be the same
+  // leak as the chip above.
   const placeholder =
-    mode === 'document'
+    mode === 'document' && entered
       ? DOC_PLACEHOLDERS[docState] || 'Upload a document to begin'
       : 'Message Ripple'
 

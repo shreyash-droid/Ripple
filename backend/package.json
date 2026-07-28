@@ -13,7 +13,9 @@
     "serverless-offline": "^14.0.0"
   },
   "dependencies": {
+    "@aws-sdk/client-sqs": "^3.1096.0",
     "@google/genai": "^2.13.0",
+    "cohere-ai": "^8.0.0",
     "dotenv": "^17.4.2",
     "groq-sdk": "^1.4.0",
     "pg": "^8.22.0"

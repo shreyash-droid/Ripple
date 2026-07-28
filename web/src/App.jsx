@@ -502,6 +502,7 @@ export default function App() {
             onUpload={handleUpload}
             docName={docName}
             docState={docState}
+            entered={entered}
           />
         </div>
       </div>

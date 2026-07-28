@@ -1204,12 +1204,18 @@
   }
 }
 
+/* Chat-only chrome. The composer is shared with the hero, so without this ramp
+   an uploaded document stays advertised on the landing page. Same curve as
+   .h2c-modes, so the chip and the mode pills fade in together. It keeps its
+   layout box on the hero — the composer is bottom-anchored, so the reserved
+   space sits above the input bar and moves nothing. */
 .h2c-docchip {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   align-self: flex-start;
   margin: 0 0 8px 4px;
+  opacity: clamp(0, calc((var(--p, 0) - 0.55) / 0.35), 1);
   padding: 5px 12px;
   font-size: 13px;
   color: var(--text-secondary, #8a8a90);

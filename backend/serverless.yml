@@ -9,6 +9,17 @@ provider:
   environment:
     DATABASE_URL: ${env:DATABASE_URL}
     GROQ_API_KEY: ${env:GROQ_API_KEY}
+    COHERE_API_KEY: ${env:COHERE_API_KEY}
+    INGEST_QUEUE_URL:
+      Ref: IngestQueue
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - sqs:SendMessage
+          Resource:
+            - Fn::GetAtt: [IngestQueue, Arn]
 
 functions:
   health:
@@ -47,6 +58,55 @@ functions:
       - httpApi:
           path: /api/conversations/{id}/messages
           method: get
+  embedtest:
+    handler: handlers/embedtest.handler
+    events:
+      - httpApi:
+          path: /api/embedtest
+          method: get
+  ingest:
+    handler: handlers/ingest.handler
+    events:
+      - httpApi:
+          path: /api/ingest
+          method: post
+  ask:
+    handler: handlers/ask.handler
+    events:
+      - httpApi:
+          path: /api/ask
+          method: post
+  documentStatus:
+    handler: handlers/documentStatus.handler
+    events:
+      - httpApi:
+          path: /api/documents/{id}
+          method: get
+  ingestWorker:
+    handler: handlers/ingestWorker.handler
+    timeout: 300
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt: [IngestQueue, Arn]
+          batchSize: 1
+
+resources:
+  Resources:
+    IngestQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ripple-ingest-queue
+        VisibilityTimeout: 360
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt: [IngestDLQ, Arn]
+          maxReceiveCount: 3
+    IngestDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ripple-ingest-dlq
+        MessageRetentionPeriod: 1209600
 
 plugins:
   - serverless-offline
