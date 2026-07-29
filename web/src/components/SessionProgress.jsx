@@ -54,15 +54,15 @@ export default function SessionProgress({ summary, subject = 'scored' }) {
           </div>
           <div>
             <dt>latest</dt>
-            <dd data-tone={scoreTone(latest, max)}>{latest.toFixed(1)}</dd>
+            <dd data-tone={scoreTone(latest, max)}>{Math.round(latest)}</dd>
           </div>
           <div>
             <dt>average</dt>
-            <dd>{average.toFixed(1)}</dd>
+            <dd>{Math.round(average)}</dd>
           </div>
           <div>
             <dt>best</dt>
-            <dd>{best.toFixed(1)}</dd>
+            <dd>{Math.round(best)}</dd>
           </div>
         </dl>
 
@@ -84,7 +84,7 @@ export default function SessionProgress({ summary, subject = 'scored' }) {
           <li key={c.key} title={`average ${c.average} of ${max} across the session`}>
             <span className="h2c-session__cname">{c.label}</span>
             <span className="h2c-session__cval" data-tone={scoreTone(c.average, max)}>
-              {c.average.toFixed(1)}
+              {Math.round(c.average)}
             </span>
             {c.delta != null && c.delta !== 0 && (
               <span className="h2c-session__cdelta" data-dir={c.delta > 0 ? 'up' : 'down'}>

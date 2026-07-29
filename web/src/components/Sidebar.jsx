@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import ProfileBadge from './ProfileBadge'
 import { LogOutIcon, MoreIcon, PanelLeftIcon, PencilIcon, PlusIcon, TrashIcon } from './Icons'
 
 // Roughly how tall the menu gets, used only to keep it on screen near the
@@ -156,9 +157,11 @@ export default function Sidebar({
         </div>
 
         <div className="h2c-rail__foot">
-          <div className="h2c-sidebar__user-avatar" title={user.name}>
-            {user.initials}
-          </div>
+          <ProfileBadge
+            user={user}
+            avatarClassName="h2c-sidebar__user-avatar"
+            placement="top-start"
+          />
           <button
             type="button"
             className="h2c-railbtn"
@@ -309,7 +312,11 @@ export default function Sidebar({
       )}
 
       <div className="h2c-sidebar__user">
-        <div className="h2c-sidebar__user-avatar">{user.initials}</div>
+        <ProfileBadge
+          user={user}
+          avatarClassName="h2c-sidebar__user-avatar"
+          placement="top-start"
+        />
         <span className="h2c-sidebar__user-name" title={user.name}>
           {user.name}
         </span>

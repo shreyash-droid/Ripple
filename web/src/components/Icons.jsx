@@ -35,6 +35,16 @@ export function ArrowUpIcon({ size = 16 }) {
   )
 }
 
+/** Detaches a file from the composer. */
+export function CloseIcon({ size = 12 }) {
+  return (
+    <Svg size={size} strokeWidth={2}>
+      <path d="m6 6 12 12" />
+      <path d="m18 6-12 12" />
+    </Svg>
+  )
+}
+
 /** Opens the sidebar as a drawer on narrow screens. */
 export function MenuIcon({ size = 18 }) {
   return (
@@ -191,12 +201,18 @@ export function TargetIcon({ size = 13 }) {
   )
 }
 
-/** Reviewer — code brackets. */
-export function CodeIcon({ size = 13 }) {
+/* Resume review — a page with a headshot and lines of detail. Deliberately not
+   the same page as DocIcon below: at 13px the only thing separating the two
+   modes is the silhouette, so this one has to say "a person's document" at a
+   glance rather than "a document". */
+export function ResumeIcon({ size = 13 }) {
   return (
-    <Svg size={size} strokeWidth={1.8}>
-      <path d="m9 7-5 5 5 5" />
-      <path d="m15 7 5 5-5 5" />
+    <Svg size={size} strokeWidth={1.6}>
+      <rect x="4" y="3" width="16" height="18" rx="2.2" />
+      <circle cx="9" cy="8.6" r="1.8" />
+      <path d="M13 8.6h3.6" />
+      <path d="M7.4 14h9.2" />
+      <path d="M7.4 17.3h6" />
     </Svg>
   )
 }

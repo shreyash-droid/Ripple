@@ -14,9 +14,25 @@
  * the session track improvement across turns.
  */
 
-// Every criterion is scored on the same scale so the frontend can render one
-// meter and the session average means something across modes.
-export const SCORE_MAX = 5;
+/* Every criterion is scored on the same scale so the frontend can render one
+   meter and the session average means something across modes.
+
+   0-100 rather than 0-5: a five-point scale collapses under its own coarseness —
+   the model reaches for 3 and 4 for almost everything, so two genuinely different
+   answers land on the same number and the session trend flatlines. A percentage
+   is also the scale people already read scores in, so no legend is needed.
+   Scorecards persisted under the old scale carry their own `max` and are rescaled
+   on read by the frontend (web/src/lib/scoring.js). */
+export const SCORE_MAX = 100;
+
+/* Without anchors a 0-100 scale drifts: everything becomes an 85. These bands are
+   stated in the prompt so the same work earns the same number across turns. */
+const SCALE_ANCHORS =
+  "- 90-100: exceptional. You would hold this up as the example.\n" +
+  "- 75-89: strong. Minor polish left, nothing substantive.\n" +
+  "- 60-74: solid but clearly improvable. The gap is nameable.\n" +
+  "- 40-59: weak. A real deficiency a reviewer would stop on.\n" +
+  "- 0-39: absent or misleading on this criterion.";
 
 export const MODE_WORKFLOWS = {
   general: {
@@ -34,6 +50,9 @@ export const MODE_WORKFLOWS = {
     scored: true,
     // what the rubric is judging, used in the prompt and in the UI card
     subject: "answer",
+    // how the envelope describes a scorable turn, and what `next` should hold
+    scorableWhen: "an answer to score",
+    nextIs: "the next interview question to ask",
     labels: {
       strengths: "What worked",
       improvements: "What to tighten",
@@ -70,55 +89,66 @@ export const MODE_WORKFLOWS = {
       "3. If it is not an answer (they are setting up the session, asking about the process, or " +
       "asking you to change the role or difficulty), do not score. Reply briefly and ask them " +
       "the first or next interview question so the session keeps moving.\n\n" +
-      "Score honestly. A generic answer with no numbers is a 2, not a 4 — inflated scores make " +
-      "the session useless. Reserve 5 for an answer you would pass to a hiring committee. " +
-      "Reference the user's own words in your notes so the feedback is clearly about their answer.",
+      "Score honestly. A generic answer with no numbers is a 45, not an 80 — inflated scores make " +
+      "the session useless. Reserve the 90s for an answer you would pass to a hiring committee " +
+      "unedited. Reference the user's own words in your notes so the feedback is clearly about " +
+      "their answer.",
   },
 
   /* ---------------------------------------------------------------- *
-   * Code reviewer — score the change, then name the first fix
+   * Resume reviewer — score the resume, then name the first edit
    * ---------------------------------------------------------------- */
+  /* The key stays `reviewer` even though the mode is now about resumes: it is
+     the value persisted in conversations.mode, so renaming it would orphan every
+     existing conversation. What the mode *is* lives in this object. */
   reviewer: {
     scored: true,
-    subject: "code",
+    subject: "resume",
+    scorableWhen: "a resume, or a section of one, to review",
+    nextIs: "the single highest-value edit to make first",
     labels: {
-      strengths: "Holds up well",
-      improvements: "Findings",
-      next: "Fix this first",
+      strengths: "Working for you",
+      improvements: "What to fix",
+      next: "Change this first",
     },
     criteria: [
       {
-        key: "correctness",
-        label: "Correctness",
-        hint: "The logic holds for the stated inputs and for the edge cases",
+        key: "impact",
+        label: "Impact",
+        hint: "Bullets state outcomes with numbers, scale or results — not the duties of the job",
       },
       {
-        key: "robustness",
-        label: "Robustness",
-        hint: "Errors, nulls, boundaries and concurrent access are handled",
+        key: "relevance",
+        label: "Relevance",
+        hint: "Content is aimed at the target role; the skills and keywords a screener looks for are present and near the top",
       },
       {
         key: "clarity",
         label: "Clarity",
-        hint: "Naming and structure a stranger could follow without the author",
+        hint: "Wording, structure and length a recruiter can scan in thirty seconds — strong verbs, no padding",
       },
       {
-        key: "efficiency",
-        label: "Efficiency",
-        hint: "Algorithmic and allocation cost are sane for the expected scale",
+        key: "credibility",
+        label: "Credibility",
+        hint: "Specific and consistent — real titles, dates without unexplained gaps, claims a reference could confirm",
       },
     ],
     system:
-      "You are a senior engineer reviewing code.\n\n" +
+      "You are a hiring manager and professional resume reviewer who has screened thousands of " +
+      "resumes and knows what survives both an ATS filter and a six-second human scan.\n\n" +
       "Your workflow on every turn:\n" +
-      "1. Decide whether the user's message actually contains code or a described change to review.\n" +
-      "2. If it does, score it against the rubric, list concrete findings (each one anchored to a " +
-      "specific line, function or construct), and name the single fix you would make first.\n" +
-      "3. If it does not (they are asking a general engineering question, or following up on an " +
-      "earlier finding), do not score. Answer the question directly.\n\n" +
-      "Be specific over polite: 'this loses the error' beats 'consider error handling'. " +
-      "Do not invent problems to fill the list — if a criterion is genuinely clean, score it high " +
-      "and say why. Quote the identifier you are talking about so the author can find it.",
+      "1. Decide whether the user's message actually contains resume content — a full resume, a " +
+      "section, or even a handful of bullets.\n" +
+      "2. If it does, score it against the rubric, list concrete findings (each one quoting the " +
+      "exact bullet or line it is about), and name the single edit you would make first.\n" +
+      "3. If it does not (they are asking how to phrase something, which format to use, or " +
+      "following up on an earlier point), do not score. Answer the question directly.\n\n" +
+      "If they name the role they are targeting, judge relevance against that role; if they have " +
+      "not, say what you are assuming rather than scoring relevance blind.\n\n" +
+      "Be specific over polite: \"'Responsible for the migration' names a duty, not a result\" beats " +
+      "'consider adding more impact'. Where you flag a weak bullet, rewrite it — a stronger version " +
+      "the user can paste in is worth more than a note telling them to write one. Do not invent " +
+      "problems to fill the list: if a criterion is genuinely strong, score it high and say why.",
   },
 
   /* ---------------------------------------------------------------- *
@@ -147,7 +177,7 @@ export function envelopeInstructions(workflow) {
 
   return (
     "Reply with a single JSON object and nothing else.\n\n" +
-    `When the message IS ${workflow.subject === "code" ? "code to review" : "an answer to score"}:\n` +
+    `When the message IS ${workflow.scorableWhen}:\n` +
     "{\n" +
     '  "scored": true,\n' +
     '  "verdict": "one sentence summarising the overall quality",\n' +
@@ -156,14 +186,16 @@ export function envelopeInstructions(workflow) {
     "\n  },\n" +
     '  "strengths": ["1-3 short bullets, concrete"],\n' +
     '  "improvements": ["1-3 short bullets, each one actionable"],\n' +
-    `  "next": "${workflow.subject === "code" ? "the single highest-value fix" : "the next interview question to ask"}"\n` +
+    `  "next": "${workflow.nextIs}"\n` +
     "}\n\n" +
     "When it is NOT:\n" +
     '{ "scored": false, "reply": "your reply in markdown" }\n\n' +
-    "Rubric — score each criterion 0-" +
-    SCORE_MAX +
-    ":\n" +
-    workflow.criteria.map((c) => `- ${c.key} (${c.label}): ${c.hint}`).join("\n")
+    `Rubric — score each criterion 0-${SCORE_MAX}:\n` +
+    workflow.criteria.map((c) => `- ${c.key} (${c.label}): ${c.hint}`).join("\n") +
+    "\n\nWhat the numbers mean — use the whole range, and use these bands:\n" +
+    SCALE_ANCHORS +
+    "\nScore each criterion independently — strength on one does not carry the others. " +
+    "Whole numbers only."
   );
 }
 
@@ -183,7 +215,8 @@ export function normaliseScorecard(workflow, parsed) {
     criteria.push({
       key,
       label,
-      score: Math.max(0, Math.min(SCORE_MAX, Math.round(score * 10) / 10)),
+      // whole numbers: on a 0-100 scale a decimal place is false precision
+      score: Math.max(0, Math.min(SCORE_MAX, Math.round(score))),
       note: typeof entry?.note === "string" ? entry.note.trim() : "",
     });
   }
@@ -196,7 +229,7 @@ export function normaliseScorecard(workflow, parsed) {
 
   return {
     max: SCORE_MAX,
-    overall: Math.round(overall * 10) / 10,
+    overall: Math.round(overall),
     criteria,
     verdict: typeof parsed.verdict === "string" ? parsed.verdict.trim() : "",
   };

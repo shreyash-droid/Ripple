@@ -80,6 +80,7 @@ export default function Thread({
   onRevealDone,
   empty,
   onStarter,
+  suggestions = [],
   scoreLabel,
 }) {
   const scrollRef = useRef(null)
@@ -138,6 +139,25 @@ export default function Thread({
               previous={previousOverall(scorecards, m.id)}
             />
           ),
+        )}
+
+        {/* Openers for a thread that is not empty but has not been asked
+            anything yet — a loaded document. Indented to the assistant's text
+            column so they read as following on from its message rather than
+            floating at the thread's edge. */}
+        {suggestions.length > 0 && !loading && (
+          <div className="h2c-suggest">
+            {suggestions.map((text) => (
+              <button
+                type="button"
+                key={text}
+                className="h2c-starter"
+                onClick={() => onStarter?.(text)}
+              >
+                {text}
+              </button>
+            ))}
+          </div>
         )}
 
         {loading && <Loader />}

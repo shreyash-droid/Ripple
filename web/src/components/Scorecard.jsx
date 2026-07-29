@@ -9,7 +9,7 @@ import { formatDelta, scoreTone } from '../lib/scoring'
  */
 export default function Scorecard({ scorecard, label = 'Score', previous = null }) {
   const { overall, max, criteria } = scorecard
-  const delta = previous == null ? null : Math.round((overall - previous) * 10) / 10
+  const delta = previous == null ? null : Math.round(overall - previous)
 
   return (
     <section className="h2c-score" aria-label={`${label}: ${overall} out of ${max}`}>
@@ -25,7 +25,7 @@ export default function Scorecard({ scorecard, label = 'Score', previous = null 
         )}
 
         <span className="h2c-score__overall" data-tone={scoreTone(overall, max)}>
-          {overall.toFixed(1)}
+          {Math.round(overall)}
           <span className="h2c-score__outof">/{max}</span>
         </span>
       </header>
@@ -36,7 +36,7 @@ export default function Scorecard({ scorecard, label = 'Score', previous = null 
             <div className="h2c-score__cellhead">
               <span className="h2c-score__name">{c.label}</span>
               <span className="h2c-score__val" data-tone={scoreTone(c.score, max)}>
-                {c.score}
+                {Math.round(c.score)}
               </span>
             </div>
             {/* the numbers are already readable text above, so the bar is decoration */}

@@ -7,15 +7,35 @@
  * nothing instead of leaving a hole in a counter.
  */
 
-const round1 = (n) => Math.round(n * 10) / 10
+/* The scale every score is shown on, matching SCORE_MAX in backend/lib/rubrics.js.
+   Whole numbers throughout: out of 100, a decimal place is false precision. */
+export const SCORE_SCALE = 100
+
+const whole = (n) => Math.round(n)
 const mean = (nums) => nums.reduce((sum, n) => sum + n, 0) / nums.length
+
+/* Conversations scored before the scale moved to 0-100 carry cards with max: 5.
+   Rescaling them on read is what keeps the UI honest about being "out of 100"
+   everywhere — and, more importantly, stops a session average from being taken
+   across two different scales, which would be a meaningless number. */
+function toScale(card) {
+  const from = Number(card.max) || SCORE_SCALE
+  if (from === SCORE_SCALE) return card
+  const up = (n) => whole((n / from) * SCORE_SCALE)
+  return {
+    ...card,
+    max: SCORE_SCALE,
+    overall: up(card.overall),
+    criteria: card.criteria.map((c) => ({ ...c, score: up(c.score) })),
+  }
+}
 
 /* jsonb comes back parsed from pg, but a message built optimistically in the
    client passes the scorecard straight through — accept either shape. */
 function readScorecard(message) {
   const meta = typeof message?.meta === 'string' ? safeParse(message.meta) : message?.meta
   const card = message?.scorecard || meta?.scorecard
-  return Array.isArray(card?.criteria) && card.criteria.length ? card : null
+  return Array.isArray(card?.criteria) && card.criteria.length ? toScale(card) : null
 }
 
 function safeParse(text) {
@@ -49,7 +69,9 @@ export function summarizeSession(scorecards) {
 
   const cards = scorecards.map((s) => s.scorecard)
   const trend = cards.map((c) => c.overall)
-  const max = cards[cards.length - 1].max || 5
+  // every card has been normalised to one scale by now, so the last one speaks
+  // for all of them
+  const max = cards[cards.length - 1].max || SCORE_SCALE
 
   /* Order by the newest card: if the rubric was reworded between turns, the
      criteria the user is being scored on *now* are the ones worth leading with.
@@ -73,9 +95,9 @@ export function summarizeSession(scorecards) {
     return {
       key,
       label,
-      average: round1(mean(scores)),
+      average: whole(mean(scores)),
       latest: scores[scores.length - 1],
-      delta: scores.length > 1 ? round1(scores[scores.length - 1] - scores[0]) : null,
+      delta: scores.length > 1 ? whole(scores[scores.length - 1] - scores[0]) : null,
     }
   })
 
@@ -85,10 +107,10 @@ export function summarizeSession(scorecards) {
     trend,
     first: trend[0],
     latest: trend[trend.length - 1],
-    best: round1(Math.max(...trend)),
-    average: round1(mean(trend)),
+    best: whole(Math.max(...trend)),
+    average: whole(mean(trend)),
     // improvement is only meaningful once there is something to improve on
-    delta: trend.length > 1 ? round1(trend[trend.length - 1] - trend[0]) : null,
+    delta: trend.length > 1 ? whole(trend[trend.length - 1] - trend[0]) : null,
     criteria,
   }
 }
@@ -96,14 +118,14 @@ export function summarizeSession(scorecards) {
 /* Three bands, so a glance at the colour says as much as reading the number.
    Thresholds are fractions of max rather than absolutes so they survive a change
    to the scale. */
-export function scoreTone(score, max = 5) {
+export function scoreTone(score, max = SCORE_SCALE) {
   const ratio = max ? score / max : 0
   if (ratio >= 0.7) return 'high'
   if (ratio >= 0.45) return 'mid'
   return 'low'
 }
 
-/** Signed, one decimal, for delta chips: 1.2 → "+1.2". */
+/** Signed, for delta chips: 12 → "+12". */
 export function formatDelta(delta) {
-  return `${delta > 0 ? '+' : delta < 0 ? '−' : '±'}${Math.abs(delta).toFixed(1)}`
+  return `${delta > 0 ? '+' : delta < 0 ? '−' : '±'}${Math.abs(whole(delta))}`
 }

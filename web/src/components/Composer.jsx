@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { ArrowUpIcon, PlusIcon } from './Icons'
+import { ArrowUpIcon, CloseIcon, PlusIcon } from './Icons'
 import { modeConfig } from '../lib/modes'
 
 export default function Composer({
@@ -9,17 +9,28 @@ export default function Composer({
   modes,
   mode,
   onModeChange,
+  pendingMode,
+  onConfirmMode,
+  onCancelMode,
   busy,
   showUpload,
   onUpload,
-  docName,
-  docState = 'idle',
+  onDetach,
+  attachName,
+  attachState = 'idle',
   entered,
 }) {
   const fieldRef = useRef(null)
   const fileRef = useRef(null)
   const boxRef = useRef(null)
   const hasDraft = draft.trim().length > 0
+
+  const upload = modeConfig(mode).upload
+  /* An attached resume becomes the message, so it can be sent with an empty box
+     — anything typed beside it is optional context. An ingested document is the
+     opposite: it is the thing being asked *about*, so an empty question there is
+     still nothing to send. */
+  const canSend = (hasDraft || (upload?.sendsWithMessage && attachState === 'ready')) && !busy
 
   useEffect(() => {
     const el = fieldRef.current
@@ -41,6 +52,16 @@ export default function Composer({
     return () => ro.disconnect()
   }, [])
 
+  // Escape backs out of the mode-switch prompt, the way it would any dialog.
+  useEffect(() => {
+    if (!pendingMode) return undefined
+    const onKey = (e) => {
+      if (e.key === 'Escape') onCancelMode?.()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [pendingMode, onCancelMode])
+
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -48,35 +69,74 @@ export default function Composer({
     }
   }
 
-  // Ingestion is queued, so a named document is not yet an answerable one —
-  // the placeholder has to say which of the two the user is looking at.
-  const DOC_PLACEHOLDERS = {
-    processing: `Processing ${docName}…`,
-    ready: `Ask about ${docName}`,
-    failed: 'Upload the document again',
-  }
-
   /* On the landing page the mode pills are hidden too, so the composer reads as
-     a plain entry point — naming the loaded document, or prompting for code,
+     a plain entry point — naming the loaded document, or prompting for a resume,
      would be the same leak as the chip above. Inside the chat the placeholder is
      the mode's, since what you are expected to type differs sharply between
      "message Ripple" and "answer as you would in the room". */
-  const placeholder = !entered
-    ? 'Message Ripple'
-    : mode === 'document'
-      ? DOC_PLACEHOLDERS[docState] || modeConfig(mode).placeholder
-      : modeConfig(mode).placeholder
+  function placeholderFor() {
+    if (!entered) return 'Message Ripple'
+    const fallback = modeConfig(mode).placeholder
+
+    if (attachState === 'processing') return `Reading ${attachName}…`
+    if (attachState === 'failed') return `Attach ${attachName} again`
+
+    if (attachState === 'ready') {
+      // Ingestion is queued, so a named document is only answerable now that the
+      // worker is done — and a resume that is attached still needs sending.
+      return upload?.sendsWithMessage
+        ? 'Add the role you are targeting — or just send it'
+        : `Ask about ${attachName}`
+    }
+    return fallback
+  }
+
+  const placeholder = placeholderFor()
 
   return (
     <div className="h2c-composer" ref={boxRef}>
+      {/* Floated above the pills rather than inserted before them: the composer
+          is bottom-anchored, so laying this out in flow would shove the whole
+          input bar up the screen just to ask a yes/no question. */}
+      {pendingMode && (
+        <div
+          className="h2c-modeswitch"
+          role="dialog"
+          aria-labelledby="h2c-modeswitch-title"
+        >
+          <p className="h2c-modeswitch__title" id="h2c-modeswitch-title">
+            Start a new chat in {modeConfig(pendingMode).label}?
+          </p>
+          <p className="h2c-modeswitch__body">
+            Each chat stays in one mode. This one stays in your history.
+          </p>
+          <div className="h2c-modeswitch__actions">
+            <button type="button" className="h2c-modeswitch__btn" onClick={onCancelMode}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="h2c-modeswitch__btn is-primary"
+              onClick={() => onConfirmMode(pendingMode)}
+              autoFocus
+            >
+              Start new chat
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="h2c-modes">
         {modes.map(({ value, label, hint, Icon }) => (
           <button
             type="button"
             key={value}
-            className={`h2c-mode${value === mode ? ' is-active' : ''}`}
+            className={`h2c-mode${value === mode ? ' is-active' : ''}${
+              value === pendingMode ? ' is-pending' : ''
+            }`}
             onClick={() => onModeChange(value)}
             title={hint}
+            aria-pressed={value === mode}
           >
             <Icon />
             {label}
@@ -84,24 +144,40 @@ export default function Composer({
         ))}
       </div>
 
-      {showUpload && docName && (
-        <div className={`h2c-docchip is-${docState}`}>
+      {showUpload && attachName && (
+        <div className={`h2c-docchip is-${attachState}`}>
           <span className="h2c-docchip__dot" />
-          {docState === 'processing'
-            ? `Processing ${docName}…`
-            : docState === 'failed'
-              ? `Couldn't process ${docName}`
-              : docName}
+          {attachState === 'processing'
+            ? `Reading ${attachName}…`
+            : attachState === 'failed'
+              ? `Couldn't read ${attachName}`
+              : attachName}
+          {/* Only for attachments that are about to be sent. Picking the wrong
+              file is otherwise a dead end until you start a new chat. */}
+          {onDetach && attachState !== 'processing' && (
+            <button
+              type="button"
+              className="h2c-docchip__x"
+              onClick={onDetach}
+              aria-label={`Remove ${attachName}`}
+              title="Remove"
+            >
+              <CloseIcon size={12} />
+            </button>
+          )}
         </div>
       )}
 
-      <div className="h2c-inputbar">
-        {showUpload ? (
+      <div className={`h2c-inputbar${showUpload ? '' : ' is-plain'}`}>
+        {/* No + at all in the modes that take no attachment, and none on the
+            landing page. A button that opens nothing is worse than no button:
+            it advertises a capability the mode does not have. */}
+        {showUpload && (
           <>
             <input
               ref={fileRef}
               type="file"
-              accept=".pdf,.txt"
+              accept={upload.accept}
               style={{ display: 'none' }}
               onChange={(e) => {
                 onUpload(e.target.files?.[0])
@@ -111,18 +187,14 @@ export default function Composer({
             <button
               type="button"
               className="h2c-attach"
-              aria-label="Upload a document"
-              title="Upload a document"
+              aria-label={upload.label}
+              title={upload.label}
               onClick={() => fileRef.current?.click()}
-              disabled={docState === 'processing'}
+              disabled={attachState === 'processing'}
             >
               <PlusIcon size={17} />
             </button>
           </>
-        ) : (
-          <button type="button" className="h2c-attach" aria-label="Add an attachment">
-            <PlusIcon size={17} />
-          </button>
         )}
 
         <textarea
@@ -137,9 +209,9 @@ export default function Composer({
         />
         <button
           type="button"
-          className={`h2c-send${hasDraft && !busy ? ' is-ready' : ''}`}
+          className={`h2c-send${canSend ? ' is-ready' : ''}`}
           onClick={onSend}
-          disabled={!hasDraft || busy}
+          disabled={!canSend}
           aria-label="Send message"
         >
           <ArrowUpIcon />

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import BinaryWaves from './components/BinaryWaves'
 import Composer from './components/Composer'
 import Hero from './components/Hero'
+import ProfileBadge from './components/ProfileBadge'
 import SessionProgress from './components/SessionProgress'
 import Sidebar from './components/Sidebar'
 import Thread from './components/Thread'
@@ -73,12 +74,23 @@ export default function App() {
   // lets a superseding upload, a new chat, or an unmount call off the poll
   const uploadAbortRef = useRef(null)
 
+  /* A resume attached in reviewer mode. Deliberately nothing like the document
+     above: it is never uploaded, chunked or embedded, because the reviewer
+     scores the text you hand it rather than retrieving from a store. The file is
+     read in the browser and its text is folded into the next message, so a
+     resume that has been sent lives in the thread like anything else the user
+     typed — and reloads, exports and history all work with no special case. */
+  const [resume, setResume] = useState(null) // { name, status, text } | null
+
   const [conversations, setConversations] = useState([])
   // restored from the URL so a reload lands back in the conversation
   const [activeId, setActiveId] = useState(() => readRoute().conversationId)
   const [messages, setMessages] = useState([])
   const [draft, setDraft] = useState('')
   const [mode, setMode] = useState('general')
+  // a mode the user has asked for but not yet confirmed, since switching ends
+  // the current chat; null when nothing is being asked
+  const [pendingMode, setPendingMode] = useState(null)
   const [loading, setLoading] = useState(false)
   // id of the reply Thread is currently typing out; null when nothing is
   // animating. Thread owns the reveal, this just says which message gets it.
@@ -94,8 +106,13 @@ export default function App() {
     activeIdRef.current = activeId
   }, [activeId])
 
-  // the ask box stays locked until the worker has finished with the document
-  const busy = loading || animatingId !== null || (mode === 'document' && docState === 'processing')
+  // the ask box stays locked until the worker has finished with the document,
+  // and until a resume has actually been read out of its PDF
+  const busy =
+    loading ||
+    animatingId !== null ||
+    (mode === 'document' && docState === 'processing') ||
+    (mode === 'reviewer' && resume?.status === 'processing')
 
   /* ---------------------------------------------------------------- *
    * scroll-driven transition
@@ -286,11 +303,21 @@ export default function App() {
      onClick, so a click arrives here as an event — only a string is text. */
   const send = async (override) => {
     const text = (typeof override === 'string' ? override : draft).trim()
-    if (!text || busy) return
+    // A ready resume is itself something to send, so an empty box is fine when
+    // one is attached. A starter click (override) never carries the attachment.
+    const attached =
+      mode === 'reviewer' && !override && resume?.status === 'ready' ? resume : null
+    if ((!text && !attached) || busy) return
+
+    /* The attachment stops being an attachment the moment it is sent: its text
+       is now part of a message in the thread, so re-sending it on the next turn
+       would submit the resume twice. */
+    const outgoing = attached ? withResume(attached, text) : text
+    if (attached) setResume(null)
 
     enterChat()
 
-    setMessages((m) => [...m, { id: `user-${Date.now()}`, role: 'user', content: text }])
+    setMessages((m) => [...m, { id: `user-${Date.now()}`, role: 'user', content: outgoing }])
     setDraft('')
     setLoading(true)
 
@@ -317,8 +344,11 @@ export default function App() {
         data = await askDocument({ question: text, documentId })
         replyText = data.answer ?? ''
       } else {
-        data = await sendChat({ message: text, mode, conversationId: activeId })
+        data = await sendChat({ message: outgoing, mode, conversationId: activeId })
         replyText = data.reply ?? ''
+        // the server runs the conversation's own mode, so if the two ever drift
+        // the pill follows the turn that actually happened
+        if (data.mode && data.mode !== mode) setMode(data.mode)
         if (data.conversationId && data.conversationId !== activeId) {
           loadedIdRef.current = data.conversationId
           setActiveId(data.conversationId)
@@ -345,6 +375,40 @@ export default function App() {
       if (mode !== 'document') refreshConversations()
     } catch (err) {
       setLoading(false)
+      setMessages((m) => [...m, errorMessage(err)])
+    }
+  }
+
+  /* Reviewer's upload. Reads the file in the browser and stops — no request, no
+     ingestion queue — because the text is destined for the next message rather
+     than for a vector store. */
+  const attachResume = async (file) => {
+    if (!file) return
+    setResume({ name: file.name, status: 'processing', text: '' })
+
+    try {
+      const raw =
+        file.type === 'application/pdf'
+          ? await extractPdfText(file)
+          : await file.text() // plain .txt fallback
+
+      // pdf.js joins text items with spaces, which leaves ragged runs of
+      // whitespace where a two-column resume layout was
+      const text = raw.replace(/[ \t]+/g, ' ').replace(/\n\s*\n\s*\n+/g, '\n\n').trim()
+
+      /* A scanned or image-only resume extracts to nothing. Silently attaching an
+         empty file would send the reviewer a blank message and earn a confused
+         reply, so this fails loudly and says what to do instead. */
+      if (!text) {
+        throw new Error(
+          `I couldn't read any text out of ${file.name} — it looks like a scan or an image. ` +
+            'Try exporting it from your editor as a text PDF, or paste the text in directly.',
+        )
+      }
+
+      setResume({ name: file.name, status: 'ready', text })
+    } catch (err) {
+      setResume({ name: file.name, status: 'failed', text: '' })
       setMessages((m) => [...m, errorMessage(err)])
     }
   }
@@ -392,6 +456,9 @@ export default function App() {
     // where the sidebar is a drawer over the thread, picking dismisses it
     if (isDrawerWidth()) setSidebarCollapsed(true)
     commitEntered()
+    // whatever switch was being proposed, opening a conversation answers it:
+    // this thread's own mode is the one that applies now
+    setPendingMode(null)
     if (id === activeId) return
     cancelReveal()
     setLoading(false)
@@ -416,12 +483,43 @@ export default function App() {
     setDocumentId(null)
     setDocName(null)
     setDocState('idle')
+    // an unsent resume belongs to the thread that was being composed
+    setResume(null)
   }
 
   const newChat = () => {
     if (isDrawerWidth()) setSidebarCollapsed(true)
+    setPendingMode(null)
     clearActiveThread()
     setDraft('')
+  }
+
+  /* One chat, one mode.
+   *
+   * A thread that changes rules halfway through is unreadable in both
+   * directions: the user scrolls back through answers judged by a rubric that
+   * no longer applies, and the session trend averages coach scores together
+   * with resume scores as though they measured the same thing. So a mode switch
+   * starts a new conversation instead of mutating the current one — which is
+   * also what lets the backend treat conversations.mode as the truth.
+   *
+   * The confirmation is only asked when there is something to leave behind. On
+   * an empty thread the switch costs nothing, and a dialog there would be
+   * ceremony in front of the very first thing a new user tries. */
+  const applyMode = (next) => {
+    setPendingMode(null)
+    if (next === mode) return
+    setMode(next)
+    clearActiveThread()
+    // The draft deliberately survives. Pasting a resume and *then* realising you
+    // are in the wrong mode is the common case, and clearing it punishes exactly
+    // the user who is trying to do the right thing.
+  }
+
+  const requestModeChange = (next) => {
+    if (next === mode) return setPendingMode(null)
+    if (messages.length === 0) applyMode(next)
+    else setPendingMode(next)
   }
 
   /* Rename and delete are optimistic: both are instant in the sidebar and rolled
@@ -455,13 +553,33 @@ export default function App() {
   /* What the sidebar and the avatars render. Derived from the token's user
      rather than stored, so it follows whoever is actually signed in. */
   const identity = useMemo(
-    () => ({ name: displayName(user), initials: initialsOf(user) }),
+    () => ({
+      name: displayName(user),
+      initials: initialsOf(user),
+      email: user?.email || '',
+      // set for Google accounts, null for email/password ones — AvatarContent
+      // falls back to the initials either way
+      avatar: user?.avatar_url || '',
+    }),
     [user],
   )
 
   const activeConversation = conversations.find((c) => c.id === activeId)
   const title = activeConversation?.title || 'New chat'
   const config = modeConfig(mode)
+
+  /* Document Q&A's quick actions.
+   *
+   * Every other mode puts its openers in the empty state, but this one's empty
+   * state is shown *before* a document exists — offering "summarise this" there
+   * would only earn "upload a document first". By the time there is something to
+   * summarise, the "Loaded X" message has already retired the empty state. So
+   * these are offered in the thread instead, and withdrawn once the first
+   * question has been asked and they would be clutter. */
+  const suggestions =
+    mode === 'document' && docState === 'ready' && !messages.some((m) => m.role === 'user')
+      ? (config.suggestions ?? [])
+      : []
 
   /* Derived, not stored: every scored turn carries its own card, so the session
      trend is a fold over the thread. Reopening a conversation therefore restores
@@ -487,7 +605,7 @@ export default function App() {
 
           <Hero />
 
-          <TopBar initials={identity.initials} />
+          <TopBar user={identity} />
 
           <div className="h2c-chat">
             {!sidebarCollapsed && (
@@ -525,14 +643,7 @@ export default function App() {
                 </button>
                 <span className="h2c-main__title">{title}</span>
                 <span className="h2c-main__mode">{config.label}</span>
-                <button
-                  type="button"
-                  className="h2c-avatar h2c-header-avatar"
-                  aria-label="Account"
-                  title={identity.name}
-                >
-                  {identity.initials}
-                </button>
+                <ProfileBadge user={identity} className="h2c-header-avatar" />
               </div>
 
               {/* Only the evaluative modes ever produce one, so an ordinary chat
@@ -551,6 +662,7 @@ export default function App() {
                 onRevealDone={handleRevealDone}
                 empty={config.empty}
                 onStarter={send}
+                suggestions={suggestions}
                 scoreLabel={config.scoreLabel}
               />
             </div>
@@ -562,18 +674,36 @@ export default function App() {
             onSend={send}
             modes={MODES}
             mode={mode}
-            onModeChange={setMode}
+            onModeChange={requestModeChange}
+            pendingMode={pendingMode}
+            onConfirmMode={applyMode}
+            onCancelMode={() => setPendingMode(null)}
             busy={busy}
-            showUpload={mode === 'document'}
-            onUpload={handleUpload}
-            docName={docName}
-            docState={docState}
+            /* Only the modes that declare an upload get a + — and never on the
+               landing page, where the composer is a plain entry point and the
+               mode pills are not even interactive yet. */
+            showUpload={entered && Boolean(config.upload)}
+            onUpload={mode === 'reviewer' ? attachResume : handleUpload}
+            // detaching only makes sense for a file waiting to be sent; an
+            // ingested document is the mode's whole subject
+            onDetach={mode === 'reviewer' ? () => setResume(null) : undefined}
+            attachName={mode === 'reviewer' ? (resume?.name ?? null) : docName}
+            attachState={mode === 'reviewer' ? (resume?.status ?? 'idle') : docState}
             entered={entered}
           />
         </div>
       </div>
     </div>
   )
+}
+
+/* The message an attached resume turns into. The file name is kept so the
+   reviewer can refer to it, and anything the user typed is labelled as context
+   rather than run together with the resume text — otherwise "targeting a
+   backend role" reads like the last line of their experience section. */
+function withResume({ name, text }, note) {
+  const head = `Here is my resume (${name}):\n\n${text}`
+  return note ? `${head}\n\n---\n\nContext: ${note}` : head
 }
 
 function errorMessage(err) {

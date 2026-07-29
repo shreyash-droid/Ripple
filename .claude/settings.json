@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx eslint *)",
+      "Bash(node --input-type=module -e ' *)",
+      "Bash(sort -t: -k2)"
+    ]
+  }
+}

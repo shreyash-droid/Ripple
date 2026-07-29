@@ -11,6 +11,10 @@ export const handler = async (event) => {
     const body = JSON.parse(event.body || "{}");
     const { message, mode = "general" } = body;
     let { conversationId } = body;
+    // A conversation runs in exactly one mode. For a new chat that is whatever
+    // the client asked for; for an existing one it is whatever the conversation
+    // was created with, resolved below.
+    let effectiveMode = mode;
 
     // Basic validation
     if (!message) {
@@ -34,7 +38,7 @@ export const handler = async (event) => {
       // logged-in user could append to — and read the history of — someone else's
       // conversation by guessing its id.
       const owned = await query(
-        `SELECT 1 FROM conversations WHERE id = $1 AND user_id = $2`,
+        `SELECT mode FROM conversations WHERE id = $1 AND user_id = $2`,
         [conversationId, userId]
       );
       if (owned.length === 0) {
@@ -44,6 +48,11 @@ export const handler = async (event) => {
           body: JSON.stringify({ error: "conversation not found" }),
         };
       }
+      /* The conversation's own mode wins over whatever the client sent. The UI
+         starts a new chat on every mode switch, so the two normally agree — but
+         a stale tab could otherwise score a coach turn against the resume rubric
+         and land two incompatible scorecards in one session trend. */
+      effectiveMode = owned[0].mode || mode;
     }
 
     // 2. Fetch recent history BEFORE saving the new message
@@ -67,7 +76,7 @@ export const handler = async (event) => {
 
     // 4. Run the mode's workflow. Evaluative modes (coach, reviewer) also return
     //    a scorecard; the rest return scorecard: null.
-    const { reply, scorecard } = await generateTurn({ mode, message, history });
+    const { reply, scorecard } = await generateTurn({ mode: effectiveMode, message, history });
 
     // 5. Save the assistant's reply, with the scorecard alongside it. It lives on
     //    the message rather than on the conversation so reopening a chat restores
@@ -97,6 +106,9 @@ export const handler = async (event) => {
       body: JSON.stringify({
         conversationId,
         messageId: saved[0].id,
+        // the mode the turn actually ran in, so a client whose pill drifted out
+        // of step with the conversation can correct itself
+        mode: effectiveMode,
         reply,
         scorecard,
       }),
