@@ -1,0 +1,895 @@
+/* Auth — login / signup
+   Same stage as the landing page (binary field, ambient glow, the orb), split
+   into a brand panel and a form card. Everything here is token-driven so it
+   reads as the same product as the chat, not a bolted-on gate. */
+
+/* ------------------------------------------------------------------ *
+ * keyframes
+ * ------------------------------------------------------------------ */
+
+/* Fields arrive after the card, staggered by --d, so the eye is led down the
+   form in the order it will be filled in. */
+@keyframes auth-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes auth-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes auth-aside-in {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The wordmark's namesake: rings leave the core and dissolve. Slow and low
+   contrast — it is a texture behind the pitch, not something to watch. */
+@keyframes auth-ripple {
+  0% {
+    opacity: 0;
+    transform: scale(0.25);
+  }
+  12% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+@keyframes auth-core-pulse {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes auth-mode-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* A submit that failed shakes once. Short and small: enough to say "look
+   again", not enough to feel like a scold. */
+@keyframes auth-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * stage
+ * ------------------------------------------------------------------ */
+
+/* Scrolls on its own rather than clipping: the signup card is taller than the
+   login one, and on a short laptop window it can outgrow the viewport. The
+   backdrop layers are absolute against this box, so they stretch with it. */
+.auth {
+  position: relative;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--surface-canvas);
+  font-family: var(--font-sans);
+  display: flex;
+  padding: var(--space-7) var(--space-6);
+}
+
+/* Same radial wash as the landing hero, pushed further down and dimmed: here it
+   is a floor for the card to sit on rather than the main event. */
+.auth__ambient {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background: radial-gradient(
+    120% 90% at 50% 140%,
+    #7cf0ff 4%,
+    #4c1d95 18%,
+    #22c3ff 32%,
+    #2979ff 48%,
+    #4c3bff 62%,
+    rgba(76, 59, 255, 0.24) 78%,
+    rgba(10, 10, 11, 0) 92%
+  );
+}
+
+/* `margin: auto` rather than align-items/justify-content: centring a flex item
+   that has outgrown its container clips the overflowing top edge and leaves it
+   unreachable. Auto margins centre without ever doing that. */
+.auth__shell {
+  position: relative;
+  z-index: 1;
+  margin: auto;
+  width: 100%;
+  max-width: 1000px;
+  display: grid;
+  /* the card holds a fixed comfortable measure; the brand panel takes the rest */
+  grid-template-columns: 1fr 420px;
+  align-items: center;
+  gap: var(--space-11);
+}
+
+/* ------------------------------------------------------------------ *
+ * brand panel
+ * ------------------------------------------------------------------ */
+
+.auth__aside {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  animation: auth-aside-in var(--duration-slow) var(--ease-emphasized) both;
+}
+
+.auth__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth__wordmark {
+  font: italic 600 20px/1 var(--font-display);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+}
+
+.auth__headline {
+  margin: 0 0 var(--space-3);
+  font: var(--text-display-lg);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+}
+
+/* Italic for the turn of phrase, matching the hero — the tone comes from
+   mixing roman and italic in one family, never from a second face. */
+.auth__headline em {
+  font-style: italic;
+  color: var(--emerald-300);
+}
+
+.auth__sub {
+  margin: 0;
+  max-width: 34ch;
+  font: var(--text-body-md);
+  color: var(--text-muted);
+}
+
+/* ripple mark */
+
+.auth__ripple {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  margin: var(--space-2) 0 var(--space-1) 6px;
+}
+
+.auth__ring,
+.auth__core {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.auth__ring {
+  inset: 0;
+  border: 1px solid var(--emerald-500);
+  animation: auth-ripple 5.4s var(--ease-out) infinite;
+}
+
+.auth__ring:nth-child(2) {
+  animation-delay: 1.8s;
+}
+
+.auth__ring:nth-child(3) {
+  animation-delay: 3.6s;
+}
+
+.auth__core {
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  background: radial-gradient(circle at 35% 30%, #bfeaf7 0%, #5cc8e8 45%, #2b8caa 100%);
+  box-shadow: var(--glow-accent-sm);
+  animation: auth-core-pulse 4.5s var(--ease-standard) infinite;
+}
+
+/* mode spotlight */
+
+.auth__modes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.auth__mode {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  /* holds the row's height across modes whose hints wrap differently, so the
+     dots below never jump as the spotlight rotates */
+  min-height: 44px;
+  animation: auth-mode-in var(--duration-slow) var(--ease-emphasized) both;
+}
+
+.auth__mode-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-accent);
+  background: rgba(92, 200, 232, 0.08);
+  color: var(--emerald-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth__mode-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.auth__mode-text strong {
+  font: var(--text-heading-sm);
+  color: var(--text-primary);
+}
+
+.auth__mode-text span {
+  font: var(--text-body-sm);
+  color: var(--text-faint);
+}
+
+.auth__dots {
+  display: flex;
+  gap: 6px;
+}
+
+.auth__dots span {
+  width: 16px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--border-strong);
+  transition: background var(--duration-base) var(--ease-standard),
+    width var(--duration-base) var(--ease-standard);
+}
+
+.auth__dots span.is-on {
+  width: 26px;
+  background: var(--emerald-500);
+}
+
+/* ------------------------------------------------------------------ *
+ * card
+ * ------------------------------------------------------------------ */
+
+/* Same glass as the composer — the one raised surface this design system uses
+   for "the thing you type into". */
+.auth__card {
+  padding: var(--space-8) var(--space-7);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-default);
+  background: rgba(22, 22, 24, 0.85);
+  backdrop-filter: blur(var(--blur-panel));
+  -webkit-backdrop-filter: blur(var(--blur-panel));
+  box-shadow: var(--shadow-overlay);
+  animation: auth-card-in var(--duration-slow) var(--ease-emphasized) both;
+}
+
+.auth__head {
+  margin-bottom: var(--space-6);
+}
+
+.auth__title {
+  margin: 0 0 6px;
+  font: var(--text-display-md);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+}
+
+.auth__lede {
+  margin: 0;
+  font: var(--text-body-sm);
+  color: var(--text-muted);
+}
+
+/* segmented switch */
+
+.auth__switch {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  margin-bottom: var(--space-6);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-canvas);
+}
+
+/* One thumb that slides, rather than two buttons that light up: the movement is
+   what tells you the two states are the same control. */
+.auth__thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  border: 1px solid var(--border-soft);
+  transition: transform var(--duration-base) var(--ease-emphasized);
+}
+
+.auth__switch[data-active='signup'] .auth__thumb {
+  transform: translateX(100%);
+}
+
+.auth__tab {
+  position: relative;
+  z-index: 1;
+  padding: 9px 0;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-pill);
+  font: var(--text-label);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color var(--duration-base) var(--ease-standard);
+}
+
+.auth__tab[aria-selected='true'] {
+  color: var(--text-primary);
+}
+
+.auth__tab:hover {
+  color: var(--text-primary);
+}
+
+/* ------------------------------------------------------------------ *
+ * form
+ * ------------------------------------------------------------------ */
+
+/* No `gap` on the form: a collapsed row is zero-height but would still take its
+   share of a gap on both sides, so login would carry the empty name row's
+   spacing. The margin lives inside each field, where the collapse can hide it. */
+.auth-form {
+  display: block;
+}
+
+.auth-field {
+  margin-bottom: var(--space-4);
+  animation: auth-rise var(--duration-slow) var(--ease-emphasized) both;
+  animation-delay: var(--d, 0ms);
+}
+
+.auth-field__box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth-field__input {
+  width: 100%;
+  /* top-heavy so the floated label has somewhere to land inside the box */
+  padding: 22px 14px 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background: var(--surface-canvas);
+  color: var(--text-primary);
+  font: var(--text-body-md);
+  outline: none;
+  transition: border-color var(--duration-base) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard),
+    background var(--duration-base) var(--ease-standard);
+}
+
+.auth-field__input:hover:not(:focus) {
+  border-color: var(--border-emphasis);
+}
+
+.auth-field__input:focus {
+  border-color: var(--border-accent);
+  box-shadow: var(--glow-accent-sm);
+  background: var(--surface-1);
+}
+
+/* Chrome paints autofilled inputs a solid light blue, which would be the one
+   opaque white slab on a dark page. Repaint via an inset shadow — the only
+   property the autofill style leaves under our control. */
+.auth-field__input:-webkit-autofill,
+.auth-field__input:-webkit-autofill:hover,
+.auth-field__input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-primary);
+  -webkit-box-shadow: 0 0 0 100px var(--surface-2) inset;
+  caret-color: var(--text-primary);
+}
+
+.auth-field__input:disabled {
+  opacity: 1; /* collapsed, not greyed — it is hidden, not unavailable */
+}
+
+/* The label IS the placeholder until there is content, so the field never shows
+   two labels saying the same thing. */
+.auth-field__label {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  transform-origin: left center;
+  pointer-events: none;
+  font: var(--text-body-md);
+  color: var(--text-faint);
+  transition: transform var(--duration-base) var(--ease-emphasized),
+    color var(--duration-base) var(--ease-standard);
+}
+
+.auth-field__input:focus + .auth-field__label,
+.auth-field__input:not(:placeholder-shown) + .auth-field__label {
+  /* scale before translate: the shift is measured in the shrunken size */
+  transform: translateY(-19px) scale(0.78);
+}
+
+.auth-field__input:focus + .auth-field__label {
+  color: var(--emerald-300);
+}
+
+.auth-field.has-error .auth-field__input {
+  border-color: var(--red-500);
+}
+
+.auth-field.has-error .auth-field__input:focus {
+  box-shadow: 0 0 16px rgba(229, 72, 77, 0.3);
+}
+
+.auth-field.has-error .auth-field__label {
+  color: var(--text-danger);
+}
+
+.auth-field__reveal {
+  position: absolute;
+  right: 6px;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-standard),
+    background var(--duration-fast) var(--ease-standard);
+}
+
+.auth-field__reveal:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
+/* room for the reveal button, so a long password never runs under it */
+.auth-field__box:has(.auth-field__reveal) .auth-field__input {
+  padding-right: 46px;
+}
+
+.auth-field__msg {
+  margin: 6px 0 0 2px;
+  font: var(--text-body-sm);
+  color: var(--text-danger);
+  animation: auth-rise var(--duration-fast) var(--ease-out) both;
+}
+
+.auth-field__msg.is-hint {
+  color: var(--amber-500);
+}
+
+/* collapse — the one structural difference between the two forms */
+
+/* grid-template-rows animates between 0fr and 1fr, so the card resizes itself
+   without anyone measuring anything. */
+.auth-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows var(--duration-slow) var(--ease-emphasized),
+    opacity var(--duration-base) var(--ease-standard);
+}
+
+.auth-collapse.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.auth-collapse__inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* strength meter */
+
+/* Same three-band tone scale the rubric meters use, so "how good is this" looks
+   the same everywhere in the product. */
+.auth-strength {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  --tone: var(--red-500);
+}
+
+.auth-strength[data-score='2'] {
+  --tone: var(--amber-500);
+}
+
+.auth-strength[data-score='3'],
+.auth-strength[data-score='4'] {
+  --tone: var(--emerald-500);
+}
+
+.auth-strength__bars {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.auth-strength__bars span {
+  height: 3px;
+  flex: 1;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  transition: background var(--duration-base) var(--ease-standard);
+}
+
+.auth-strength__bars span.is-lit {
+  background: var(--tone);
+}
+
+.auth-strength__label {
+  font: var(--text-caption);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--tone);
+  /* the four labels differ in width; reserving the widest stops the bars from
+     resizing on every keystroke */
+  min-width: 62px;
+  text-align: right;
+}
+
+/* form-level error */
+
+.auth-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 var(--space-4);
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(229, 72, 77, 0.35);
+  background: rgba(229, 72, 77, 0.1);
+  color: #ff9ea1;
+  font: var(--text-body-sm);
+  animation: auth-nudge 320ms var(--ease-standard) both;
+}
+
+.auth-alert svg {
+  flex-shrink: 0;
+}
+
+/* submit */
+
+.auth-submit {
+  position: relative;
+  width: 100%;
+  height: 46px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--surface-accent);
+  color: var(--text-on-accent);
+  font: var(--text-heading-sm);
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: var(--glow-accent-sm);
+  transition: background var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.auth-submit:hover:not(:disabled) {
+  background: var(--surface-accent-hover);
+  box-shadow: var(--glow-accent);
+}
+
+.auth-submit:active:not(:disabled) {
+  transform: translateY(1px);
+  background: var(--surface-accent-press);
+}
+
+.auth-submit:disabled {
+  cursor: default;
+}
+
+.auth-submit__label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity var(--duration-base) var(--ease-standard),
+    transform var(--duration-base) var(--ease-emphasized);
+}
+
+/* the arrow leans forward on hover — the only motion the resting button has */
+.auth-submit__label svg {
+  transition: transform var(--duration-base) var(--ease-emphasized);
+}
+
+.auth-submit:hover:not(:disabled) .auth-submit__label svg {
+  transform: translateX(3px);
+}
+
+/* Label and spinner swap in place, so the button never changes size mid-submit. */
+.auth-submit.is-busy .auth-submit__label {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.auth-submit__spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  border: 2px solid rgba(6, 32, 40, 0.3);
+  border-top-color: var(--text-on-accent);
+  opacity: 0;
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+.auth-submit.is-busy .auth-submit__spinner {
+  opacity: 1;
+  animation: auth-spin 700ms linear infinite;
+}
+
+/* ------------------------------------------------------------------ *
+ * google
+ * ------------------------------------------------------------------ */
+
+.auth__divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: var(--space-5) 0;
+  font: var(--text-caption);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.auth__divider::before,
+.auth__divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+/* The visible face and Google's real button, stacked. See GoogleButton.jsx for
+   why the click target has to be theirs. */
+.auth-google {
+  position: relative;
+  height: 44px;
+}
+
+.auth-google__face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-default);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font: var(--text-heading-sm);
+  transition: background var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+/* :hover on the wrapper, not the face — the pointer is over the GIS layer */
+.auth-google:hover .auth-google__face {
+  background: var(--surface-3);
+  border-color: var(--border-emphasis);
+}
+
+/* Google's button, transparent and on top. It stays in the layout (rather than
+   display:none) until ready, because renderButton needs a laid-out box to
+   measure — but it must not swallow clicks before its callback is wired. */
+.auth-google__gis {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  opacity: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.auth-google.is-ready .auth-google__gis {
+  pointer-events: auto;
+}
+
+/* mid-exchange: nothing to click, and the face says why via the spinner rules
+   above it in the card */
+.auth-google.is-busy .auth-google__gis {
+  pointer-events: none;
+}
+
+.auth-google.is-busy .auth-google__face {
+  opacity: 0.55;
+}
+
+/* ------------------------------------------------------------------ *
+ * footer
+ * ------------------------------------------------------------------ */
+
+.auth__foot {
+  margin: var(--space-6) 0 0;
+  text-align: center;
+  font: var(--text-body-sm);
+  color: var(--text-muted);
+}
+
+.auth__link {
+  padding: 0;
+  border: none;
+  background: none;
+  font: var(--text-body-sm);
+  font-weight: 600;
+  color: var(--text-accent);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.auth__link:hover {
+  color: var(--emerald-300);
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------------ *
+ * responsive
+ * ------------------------------------------------------------------ */
+
+/* Below this the two columns stop being two columns: the card is 420px and the
+   brand panel needs about the same to keep the headline off three lines. */
+@media (max-width: 940px) {
+  .auth {
+    padding: var(--space-8) var(--space-5);
+  }
+
+  .auth__shell {
+    grid-template-columns: minmax(0, 420px);
+    justify-content: center;
+    gap: var(--space-7);
+  }
+
+  /* The ripple mark and the mode spotlight are atmosphere; on a phone they
+     would push the form itself below the fold. The wordmark and the headline
+     carry the branding on their own. */
+  .auth__ripple,
+  .auth__modes {
+    display: none;
+  }
+
+  .auth__headline {
+    font: var(--text-display-md);
+    letter-spacing: var(--tracking-tight);
+  }
+
+  .auth__aside {
+    gap: var(--space-5);
+  }
+}
+
+@media (max-width: 520px) {
+  .auth {
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .auth__card {
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .auth__title {
+    font: var(--text-heading-lg);
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * reduced motion
+ * ------------------------------------------------------------------ */
+
+/* The entrances and the ripple are decorative; the state changes that carry
+   meaning — the sliding thumb, the collapse, the floating label — are kept,
+   just shortened. */
+@media (prefers-reduced-motion: reduce) {
+  .auth__aside,
+  .auth__card,
+  .auth-field,
+  .auth__mode,
+  .auth-field__msg,
+  .auth-alert {
+    animation: none;
+  }
+
+  .auth__ring,
+  .auth__core {
+    animation: none;
+  }
+
+  .auth__ring {
+    opacity: 0.18;
+  }
+
+  .auth-submit.is-busy .auth-submit__spinner {
+    animation-duration: 1.6s;
+  }
+
+  .auth__thumb,
+  .auth-collapse,
+  .auth-field__label,
+  .auth-submit__label {
+    transition-duration: var(--duration-fast);
+  }
+}

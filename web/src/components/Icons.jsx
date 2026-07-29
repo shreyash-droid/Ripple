@@ -89,6 +89,87 @@ export function TrashIcon({ size = 14 }) {
   )
 }
 
+/* ---- auth ---- */
+
+/** Reveal the password. */
+export function EyeIcon({ size = 17 }) {
+  return (
+    <Svg size={size} strokeWidth={1.6}>
+      <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </Svg>
+  )
+}
+
+/** Hide it again. */
+export function EyeOffIcon({ size = 17 }) {
+  return (
+    <Svg size={size} strokeWidth={1.6}>
+      <path d="M10.6 6.2A9.6 9.6 0 0 1 12 5.5c6.4 0 10 6.5 10 6.5a17 17 0 0 1-3.3 4" />
+      <path d="M6.4 7.9A16.6 16.6 0 0 0 2 12s3.6 6.5 10 6.5a9.9 9.9 0 0 0 4-.8" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+      <path d="m3 3 18 18" />
+    </Svg>
+  )
+}
+
+/** Sits beside a form-level error. */
+export function AlertIcon({ size = 15 }) {
+  return (
+    <Svg size={size} strokeWidth={1.7}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7.5v5" />
+      <path d="M12 16.2v.3" />
+    </Svg>
+  )
+}
+
+/** Submit affordance — the form's forward motion. */
+export function ArrowRightIcon({ size = 16 }) {
+  return (
+    <Svg size={size} strokeWidth={2.1}>
+      <path d="M4 12h15" />
+      <path d="m13 6 6 6-6 6" />
+    </Svg>
+  )
+}
+
+/** Ends the session, from the sidebar. */
+export function LogOutIcon({ size = 15 }) {
+  return (
+    <Svg size={size} strokeWidth={1.6}>
+      <path d="M9 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3" />
+      <path d="m15.5 16 4-4-4-4" />
+      <path d="M19.5 12H9.5" />
+    </Svg>
+  )
+}
+
+/* Google's mark. Multi-colour by definition, so it opts out of the shared Svg
+   wrapper's currentColor stroke entirely. */
+export function GoogleIcon({ size = 17 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M45.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h11.8c-.5 2.7-2.1 5-4.4 6.6v5.5h7.1c4.2-3.8 6.6-9.5 6.6-16.1z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 46c6 0 11-2 14.5-5.4l-7.1-5.5c-2 1.3-4.5 2.1-7.4 2.1-5.7 0-10.6-3.9-12.3-9.1H4.3v5.7C7.8 41 15.3 46 24 46z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M11.7 28.1c-.4-1.3-.7-2.7-.7-4.1s.2-2.8.7-4.1v-5.7H4.3A22 22 0 0 0 2 24c0 3.6.9 6.9 2.3 9.8l7.4-5.7z"
+      />
+      <path
+        fill="#EA4335"
+        d="M24 10.8c3.2 0 6.1 1.1 8.4 3.3l6.3-6.3C34.9 4.2 30 2 24 2 15.3 2 7.8 7 4.3 14.2l7.4 5.7c1.7-5.2 6.6-9.1 12.3-9.1z"
+      />
+    </svg>
+  )
+}
+
 /* ---- mode glyphs ---- */
 
 /** General — a spark. */

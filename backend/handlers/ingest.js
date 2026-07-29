@@ -1,10 +1,14 @@
 import { query } from "../lib/db.js";
+import { requireAuth } from "../lib/auth.js";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 
 const sqs = new SQSClient({});
 
 export const handler = async (event) => {
   try {
+    // 0. Authenticate. Throws AuthError(401) without a valid Bearer token.
+    const { userId } = requireAuth(event);
+
     const body = JSON.parse(event.body || "{}");
     const { text, filename = "untitled" } = body;
 
@@ -16,10 +20,11 @@ export const handler = async (event) => {
       };
     }
 
-    // 1. Create the row in `processing`, staging raw_text for the worker.
+    // 1. Create the row in `processing`, stamped with its owner so the document —
+    //    and every chunk the worker derives from it — belongs to this user.
     const docRows = await query(
-      "INSERT INTO documents (filename, status, raw_text) VALUES ($1, $2, $3) RETURNING id",
-      [filename, "processing", text]
+      "INSERT INTO documents (filename, status, raw_text, user_id) VALUES ($1, $2, $3, $4) RETURNING id",
+      [filename, "processing", text, userId]
     );
     const documentId = docRows[0].id;
 
@@ -39,7 +44,7 @@ export const handler = async (event) => {
     };
   } catch (err) {
     return {
-      statusCode: 500,
+      statusCode: err.statusCode || 500, // AuthError -> 401; everything else 500
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ error: err.message }),
     };

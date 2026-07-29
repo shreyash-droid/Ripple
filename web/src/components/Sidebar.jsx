@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { MoreIcon, PanelLeftIcon, PencilIcon, PlusIcon, TrashIcon } from './Icons'
+import { LogOutIcon, MoreIcon, PanelLeftIcon, PencilIcon, PlusIcon, TrashIcon } from './Icons'
 
 // Roughly how tall the menu gets, used only to keep it on screen near the
 // bottom edge. Over-estimating costs a few px of gap; under-estimating would
@@ -67,6 +67,7 @@ export default function Sidebar({
   onRename,
   onDelete,
   user,
+  onLogout,
   collapsed,
   onToggle,
 }) {
@@ -158,6 +159,15 @@ export default function Sidebar({
           <div className="h2c-sidebar__user-avatar" title={user.name}>
             {user.initials}
           </div>
+          <button
+            type="button"
+            className="h2c-railbtn"
+            onClick={onLogout}
+            aria-label="Log out"
+            title="Log out"
+          >
+            <LogOutIcon size={16} />
+          </button>
         </div>
       </aside>
     )
@@ -300,7 +310,18 @@ export default function Sidebar({
 
       <div className="h2c-sidebar__user">
         <div className="h2c-sidebar__user-avatar">{user.initials}</div>
-        <span className="h2c-sidebar__user-name">{user.name}</span>
+        <span className="h2c-sidebar__user-name" title={user.name}>
+          {user.name}
+        </span>
+        <button
+          type="button"
+          className="h2c-logout"
+          onClick={onLogout}
+          aria-label="Log out"
+          title="Log out"
+        >
+          <LogOutIcon />
+        </button>
       </div>
     </aside>
   )

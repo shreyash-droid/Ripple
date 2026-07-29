@@ -2,12 +2,36 @@
 // In dev, VITE_API_BASE is empty and Vite proxies /api to serverless-offline.
 // In prod, set VITE_API_BASE to the deployed httpApi URL.
 
+import { getToken } from './session'
+
 export const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '')
 
+/* Every handler behind /api now calls requireAuth, so a 401 means the token is
+   missing, expired or bad — the session is over regardless of which. The
+   provider registers a handler here so one rejected request tears the session
+   down everywhere instead of each caller discovering it separately. */
+let onUnauthorized = null
+
+export function setUnauthorizedHandler(fn) {
+  onUnauthorized = fn
+}
+
+// The auth endpoints are the one place a 401 is an answer rather than an
+// expired session — "wrong password" must not log you out of the tab.
+const isAuthPath = (path) => path.startsWith('/api/auth/')
+
 async function request(path, options = {}, base = API_BASE) {
+  const token = getToken()
+
   const res = await fetch(`${base}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    // built after the spread so a caller's own headers merge rather than
+    // replace the ones every request needs
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : null),
+      ...options.headers,
+    },
   })
 
   const text = await res.text()
@@ -18,8 +42,39 @@ async function request(path, options = {}, base = API_BASE) {
     throw new Error(`Unexpected response from ${path}`)
   }
 
+  if (res.status === 401 && !isAuthPath(path)) onUnauthorized?.()
+
   if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`)
   return data
+}
+
+/* ------------------------------------------------------------------ *
+ * auth
+ * ------------------------------------------------------------------ */
+
+/* All three resolve to the same { token, user } shape — the frontend never
+   cares which credential got you in, only that there's a token to carry. */
+
+export function signup({ name, email, password }) {
+  return request('/api/auth/signup', {
+    method: 'POST',
+    body: JSON.stringify({ name, email, password }),
+  })
+}
+
+export function login({ email, password }) {
+  return request('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  })
+}
+
+/** `credential` is the ID token Google Identity Services hands the button. */
+export function googleAuth(credential) {
+  return request('/api/auth/google', {
+    method: 'POST',
+    body: JSON.stringify({ credential }),
+  })
 }
 
 export function listConversations() {

@@ -20,9 +20,9 @@ import {
 import { MODES, modeConfig } from './lib/modes'
 import { collectScorecards, summarizeSession } from './lib/scoring'
 import { extractPdfText } from './lib/pdf'
+import { useAuth } from './lib/auth-context'
+import { displayName, initialsOf } from './lib/session'
 import './styles/app.css'
-
-const USER = { name: 'Maya Chen', initials: 'M' }
 
 // The stage is a 250vh scroller with a sticky 100vh viewport, so the usable
 // scroll range is 150vh. `p` runs 0 → 1 across it and drives every transition.
@@ -59,6 +59,7 @@ function clearRoute() {
 }
 
 export default function App() {
+  const { user, signOut } = useAuth()
   const rootRef = useRef(null)
   const progressRef = useRef(0)
   const loadedIdRef = useRef(null)
@@ -451,6 +452,13 @@ export default function App() {
     }
   }
 
+  /* What the sidebar and the avatars render. Derived from the token's user
+     rather than stored, so it follows whoever is actually signed in. */
+  const identity = useMemo(
+    () => ({ name: displayName(user), initials: initialsOf(user) }),
+    [user],
+  )
+
   const activeConversation = conversations.find((c) => c.id === activeId)
   const title = activeConversation?.title || 'New chat'
   const config = modeConfig(mode)
@@ -479,7 +487,7 @@ export default function App() {
 
           <Hero />
 
-          <TopBar initials={USER.initials} />
+          <TopBar initials={identity.initials} />
 
           <div className="h2c-chat">
             {!sidebarCollapsed && (
@@ -499,7 +507,8 @@ export default function App() {
               onHome={goHome}
               onRename={renameChat}
               onDelete={deleteChat}
-              user={USER}
+              user={identity}
+              onLogout={signOut}
               collapsed={sidebarCollapsed}
               onToggle={() => setSidebarCollapsed((v) => !v)}
             />
@@ -516,8 +525,13 @@ export default function App() {
                 </button>
                 <span className="h2c-main__title">{title}</span>
                 <span className="h2c-main__mode">{config.label}</span>
-                <button type="button" className="h2c-avatar h2c-header-avatar" aria-label="Account">
-                  {USER.initials}
+                <button
+                  type="button"
+                  className="h2c-avatar h2c-header-avatar"
+                  aria-label="Account"
+                  title={identity.name}
+                >
+                  {identity.initials}
                 </button>
               </div>
 
