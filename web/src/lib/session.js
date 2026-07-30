@@ -15,6 +15,46 @@
 const TOKEN_KEY = 'ripple.token'
 const USER_KEY = 'ripple.user'
 
+/* A message composed before signing in.
+ *
+ * Anonymous visitors get the whole product to play with and are only asked who
+ * they are when they actually send something. That ask is a different route, so
+ * App unmounts and React state cannot carry the message across — it goes in
+ * sessionStorage instead, which also means a reload mid-login does not lose it.
+ * sessionStorage, not local: an abandoned draft should not resurface in a new
+ * tab a week later.
+ */
+const PENDING_KEY = 'ripple.pending'
+
+/** Read the stashed message without consuming it, so mount can adopt its mode. */
+export function peekPending() {
+  try {
+    return JSON.parse(sessionStorage.getItem(PENDING_KEY) || 'null')
+  } catch {
+    return null
+  }
+}
+
+/** Read and clear it. Idempotent, which is what makes a double-invoked effect safe. */
+export function takePending() {
+  const pending = peekPending()
+  try {
+    sessionStorage.removeItem(PENDING_KEY)
+  } catch {
+    /* nothing to clear */
+  }
+  return pending
+}
+
+export function stashPending(message, mode) {
+  try {
+    sessionStorage.setItem(PENDING_KEY, JSON.stringify({ message, mode }))
+  } catch {
+    // storage unavailable: the sign-in still works, it just won't carry the
+    // message through it
+  }
+}
+
 // A token that expires in the next few seconds is already spent by the time the
 // request lands, so treat it as gone rather than letting the API say so.
 const EXPIRY_SKEW_S = 30

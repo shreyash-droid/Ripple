@@ -1,0 +1,1290 @@
+/* "How it works" — the console world.
+ *
+ * Everything here is .rl- scoped so it shares nothing with the chat shell's
+ * .h2c- namespace, and inherits only tokens.css. The brand mark is restated
+ * locally rather than imported from app.css: this route has no business
+ * dragging the whole application stylesheet in for a 22px circle.
+ *
+ * The world: one inset frame on a near-black field lit by a single ice-cyan
+ * wash. Hairline rules and dotted fields carry structure; there are no cards.
+ * Bracketed monospace is the entire control vocabulary, and mono is otherwise
+ * reserved for addresses and measurements — never as a costume for prose.
+ */
+
+.rl-page {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  background: var(--black-canvas);
+  /* the frame's own inset is the page's gutter, so nothing else needs padding */
+  --frame-inset: 20px;
+  --rule: 1px solid var(--border-faint);
+  --cy-line: rgba(92, 200, 232, 0.22);
+  /* Captions, notes, addresses and hints. NOT --text-tertiary: #5c5c62 lands at
+     about 2.8:1 on this canvas, and every quiet thing on this page is still text
+     a visitor is meant to read. This clears 4.5:1. */
+  --rl-quiet: #9a9aa2;
+}
+
+/* The light is anchored to the page, not to the viewport.
+   A fixed wash was the first instinct and it was wrong: it re-lit the top of
+   every section as that section scrolled past, so the whole page sat under one
+   flat glow and the pacing died. Absolute inside the scroll container scrolls
+   away with the content, which gives the page its shape — lit at the two ends
+   where the frames are, dark through the middle where the reading happens. */
+.rl-page::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: min(1150px, 130vh);
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(
+      108% 100% at 50% -18%,
+      rgba(92, 200, 232, 0.58) 0%,
+      rgba(43, 140, 170, 0.26) 38%,
+      rgba(20, 70, 88, 0.08) 62%,
+      transparent 78%
+    );
+}
+
+.rl-page > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ------------------------------------------------------------------ *
+ * shared vocabulary
+ * ------------------------------------------------------------------ */
+
+.rl-orb {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #bfeaf7 0%, #5cc8e8 45%, #2b8caa 100%);
+  box-shadow: 0 0 10px rgba(92, 200, 232, 0.35);
+}
+
+.rl-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.rl-brand:hover {
+  text-decoration: none;
+}
+
+.rl-brand__name {
+  font: italic 600 18px/1 var(--font-display);
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-primary);
+}
+
+/* The one control shape on this page. Brackets are drawn in CSS so the
+   accessible name stays "Start a chat" rather than "[ Start a chat ]", and so a
+   hover can move them outward without touching the label. */
+.rl-cmd {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55em;
+  padding: 10px 4px;
+  color: var(--text-primary);
+  font: 500 11.5px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.rl-cmd::before,
+.rl-cmd::after {
+  color: var(--rl-quiet);
+  transition: transform var(--duration-base) var(--ease-emphasized),
+    color var(--duration-base) var(--ease-standard);
+}
+
+.rl-cmd::before {
+  content: '[';
+}
+
+.rl-cmd::after {
+  content: ']';
+}
+
+.rl-cmd:hover {
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.rl-cmd:hover::before {
+  transform: translateX(-3px);
+  color: var(--emerald-500);
+}
+
+.rl-cmd:hover::after {
+  transform: translateX(3px);
+  color: var(--emerald-500);
+}
+
+.rl-cmd[data-tone='accent'] {
+  color: var(--emerald-300);
+}
+
+.rl-cmd[data-tone='accent']::before,
+.rl-cmd[data-tone='accent']::after {
+  color: var(--emerald-700);
+}
+
+/* Named kicker, used only on the three pillars the page promises: who we are,
+   what we do, why choose. Not grammar over every section. */
+.rl-kicker {
+  margin: 0 0 18px;
+  color: var(--emerald-500);
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.rl-display {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2.1rem, 7.4vw, 5.5rem);
+  line-height: 0.97;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  color: var(--text-primary);
+}
+
+.rl-display--sm {
+  font-size: clamp(1.9rem, 5.4vw, 3.6rem);
+}
+
+.rl-h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.55rem, 3.3vw, 2.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+  color: var(--text-primary);
+}
+
+.rl-lede {
+  margin: 0 0 18px;
+  max-width: 62ch;
+  color: var(--text-primary);
+  font: 400 clamp(1rem, 1.5vw, 1.15rem) / 1.6 var(--font-sans);
+  letter-spacing: -0.01em;
+}
+
+.rl-prose {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--text-secondary);
+  font: var(--text-body-md);
+}
+
+.rl-prose em {
+  color: var(--text-primary);
+  font-style: italic;
+}
+
+/* ---- the one authored motion moment ---- */
+
+[data-reveal] {
+  transition: opacity 640ms var(--ease-emphasized), transform 640ms var(--ease-emphasized),
+    filter 640ms var(--ease-emphasized);
+}
+
+/* Default is arrived. The observer removes this class, so no JS, no observer
+   support and reduced motion all leave a complete page rather than a blank one. */
+[data-reveal].is-waiting {
+  opacity: 0;
+  transform: translateY(18px);
+  filter: blur(9px);
+}
+
+/* ------------------------------------------------------------------ *
+ * frames
+ * ------------------------------------------------------------------ */
+
+/* Semi-transparent on purpose: the frame is a pane held up in front of the
+   light behind it, so the glow reads through its top third and the interior
+   deepens to near-black by the time the primary action arrives. */
+.rl-frame {
+  position: relative;
+  margin: var(--frame-inset);
+  border: 1px solid var(--cy-line);
+  border-radius: 26px;
+  overflow: hidden;
+  background: linear-gradient(
+    180deg,
+    rgba(8, 20, 26, 0.24) 0%,
+    rgba(9, 14, 17, 0.72) 46%,
+    rgba(10, 10, 11, 0.95) 100%
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 40px 120px rgba(0, 0, 0, 0.6);
+}
+
+/* The closing frame carries its own light, since the page-level glow has long
+   since scrolled away by the time the visitor reaches it. */
+.rl-access {
+  background:
+    radial-gradient(90% 130% at 50% 118%, rgba(92, 200, 232, 0.4) 0%, rgba(43, 140, 170, 0.14) 44%, transparent 72%),
+    linear-gradient(180deg, rgba(10, 10, 11, 0.95) 0%, rgba(9, 16, 20, 0.7) 100%);
+}
+
+/* The dotted field — the device the pinned reference was singled out for, so it
+   has to be legible rather than implied. At 0.11 alpha behind a mask that died
+   at 72% of a short radial it rendered as flat black; these are brighter dots
+   with a longer falloff. Still masked, so the texture fades before the frame's
+   lower edge and stays atmosphere rather than wallpaper. */
+.rl-field {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, rgba(180, 230, 246, 0.3) 1px, transparent 1px);
+  background-size: 26px 26px;
+  mask-image: radial-gradient(135% 115% at 50% 0%, #000 0%, rgba(0, 0, 0, 0.55) 55%, transparent 92%);
+  -webkit-mask-image: radial-gradient(
+    135% 115% at 50% 0%,
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 55%,
+    transparent 92%
+  );
+}
+
+/* dvh, not vh: on phones 100vh is the retracted-URL-bar height, which pushed the
+   primary action below the real fold on first load — and the contract names that
+   action as part of the first viewport. The vh fallback is for browsers without
+   dvh, where the two are equivalent anyway. */
+.rl-boot {
+  min-height: calc(100vh - var(--frame-inset) * 2);
+  min-height: calc(100dvh - var(--frame-inset) * 2);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- the boot sequence ---- */
+
+/* FORM is "the surface as a system coming online", and until this existed that
+   was an assertion the page never performed: the opening frame shared the same
+   generic fade as every section below it. This is the one authored moment —
+   struck border, rail, type, then the core — and it belongs to the boot frame
+   alone. Everything animates from a state that is already laid out, so nothing
+   here can leave the page blank if it never runs. */
+@keyframes rl-strike {
+  from {
+    border-color: rgba(92, 200, 232, 0);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0), 0 40px 120px rgba(0, 0, 0, 0);
+  }
+}
+
+@keyframes rl-boot-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(7px);
+  }
+}
+
+@keyframes rl-core-in {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+    filter: blur(12px);
+  }
+}
+
+@keyframes rl-sweep {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.rl-boot {
+  animation: rl-strike 900ms var(--ease-emphasized) both;
+}
+
+/* The rail resolves left-to-right, like a readout filling in. */
+.rl-rail {
+  animation: rl-sweep 700ms var(--ease-emphasized) 120ms both;
+}
+
+.rl-boot .rl-display {
+  animation: rl-boot-in 820ms var(--ease-emphasized) 300ms both;
+}
+
+.rl-core {
+  animation: rl-core-in 1000ms var(--ease-emphasized) 520ms both;
+}
+
+.rl-flank--l,
+.rl-flank--r {
+  animation: rl-boot-in 700ms var(--ease-emphasized) 760ms both;
+}
+
+.rl-boot__act {
+  animation: rl-boot-in 700ms var(--ease-emphasized) 900ms both;
+}
+
+/* The ghost stroke outside the frame, echoing it. One repeat only — a stack of
+   them would be a decoration rather than a device. */
+.rl-boot::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border: 1px solid rgba(92, 200, 232, 0.09);
+  border-radius: 38px;
+  pointer-events: none;
+}
+
+/* ---- the top rail ---- */
+
+.rl-rail {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 24px;
+  border-bottom: 1px solid rgba(92, 200, 232, 0.12);
+}
+
+.rl-rail__status {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text-secondary);
+  font: 400 11px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.rl-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--emerald-500);
+  box-shadow: 0 0 8px var(--emerald-glow);
+  animation: rl-pulse 2.4s var(--ease-standard) infinite;
+}
+
+@keyframes rl-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ---- boot middle ---- */
+
+.rl-boot__mid {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(28px, 5vh, 54px);
+  padding: clamp(40px, 7vh, 84px) 24px clamp(28px, 5vh, 52px);
+  text-align: center;
+}
+
+.rl-core-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: clamp(20px, 5vw, 72px);
+  width: 100%;
+  max-width: 980px;
+}
+
+.rl-flank {
+  margin: 0;
+  color: var(--text-secondary);
+  font: 400 11.5px/1.75 var(--font-mono);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.rl-flank--l {
+  text-align: right;
+}
+
+.rl-flank--r {
+  text-align: left;
+}
+
+/* ---- the core object ---- */
+
+.rl-core {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(132px, 21vw, 196px);
+  aspect-ratio: 5 / 6;
+}
+
+.rl-core__glow {
+  position: absolute;
+  inset: -46%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(92, 200, 232, 0.5) 0%, transparent 66%);
+  filter: blur(18px);
+}
+
+.rl-core__tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 30%;
+  background: linear-gradient(165deg, #8dd9ed 0%, #5cc8e8 42%, #2b8caa 100%);
+  box-shadow: inset 0 2px 10px rgba(255, 255, 255, 0.45), inset 0 -12px 26px rgba(4, 32, 42, 0.5),
+    0 26px 60px rgba(92, 200, 232, 0.3);
+}
+
+/* Four arcs on one ring: the four rubrics, drawn rather than illustrated. */
+.rl-core__ring {
+  position: absolute;
+  inset: 13%;
+  border-radius: 50%;
+  background: conic-gradient(
+    from -45deg,
+    rgba(6, 32, 40, 0.55) 0deg 76deg,
+    transparent 76deg 90deg,
+    rgba(6, 32, 40, 0.55) 90deg 166deg,
+    transparent 166deg 180deg,
+    rgba(6, 32, 40, 0.55) 180deg 256deg,
+    transparent 256deg 270deg,
+    rgba(6, 32, 40, 0.55) 270deg 346deg,
+    transparent 346deg 360deg
+  );
+  mask: radial-gradient(circle, transparent 58%, #000 60%, #000 72%, transparent 74%);
+  -webkit-mask: radial-gradient(circle, transparent 58%, #000 60%, #000 72%, transparent 74%);
+}
+
+.rl-core__orb {
+  width: 34%;
+  height: auto;
+  aspect-ratio: 1;
+  background: radial-gradient(circle at 34% 28%, #ffffff 0%, #eafaff 38%, #a5e2f4 100%);
+  box-shadow: 0 0 26px rgba(255, 255, 255, 0.6);
+}
+
+.rl-boot__act {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.rl-boot__hint,
+.rl-access__hint {
+  color: var(--rl-quiet);
+  font: var(--text-body-sm);
+  max-width: 44ch;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------ *
+ * sections
+ * ------------------------------------------------------------------ */
+
+.rl-section {
+  position: relative;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: clamp(76px, 12vh, 148px) 24px;
+}
+
+/* One rhythm: every section but the first is separated by a hairline that stops
+   short of the gutters, so the page reads as a ruled register throughout. */
+.rl-section + .rl-section::before,
+.rl-frame + .rl-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 24px;
+  right: 24px;
+  border-top: var(--rule);
+}
+
+/* ---- who we are ---- */
+
+.rl-who {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: clamp(32px, 6vw, 88px);
+}
+
+.rl-facts {
+  margin: 40px 0 0;
+  display: grid;
+  gap: 0;
+  border-top: var(--rule);
+}
+
+.rl-facts > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 0;
+  border-bottom: var(--rule);
+}
+
+.rl-facts dt {
+  color: var(--text-secondary);
+  font: var(--text-body-sm);
+}
+
+.rl-facts dd {
+  margin: 0;
+  color: var(--emerald-300);
+  font: 500 20px/1 var(--font-mono);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- bays ---- */
+
+/* Wide enough for two lines, not four.
+   These are set in rem, not ch, on purpose: `ch` resolves against the element's
+   own font-size, and these are wrappers carrying 15px body text, so 34ch came
+   out around 320px and stacked the display heading inside them into a ragged
+   column of fragments. rem is measured against the heading you can actually see. */
+.rl-bays__head {
+  margin-bottom: clamp(32px, 5vw, 56px);
+  max-width: 30rem;
+}
+
+.rl-bays__body {
+  display: grid;
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+  gap: clamp(28px, 5vw, 64px);
+  align-items: start;
+}
+
+.rl-baylist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: var(--rule);
+}
+
+.rl-bay {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 17px 4px;
+  border: none;
+  border-bottom: var(--rule);
+  background: none;
+  color: var(--text-secondary);
+  font: 500 15px/1.2 var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--duration-base) var(--ease-standard),
+    padding-left var(--duration-base) var(--ease-emphasized);
+}
+
+.rl-bay:hover {
+  color: var(--text-primary);
+  padding-left: 10px;
+}
+
+.rl-bay.is-on {
+  color: var(--text-primary);
+  padding-left: 10px;
+}
+
+/* The selected bay's own marker, in the register's grammar rather than a
+   filled pill: a hairline row does not become a card just because it is on. */
+.rl-bay.is-on::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 20px;
+  background: var(--emerald-500);
+  box-shadow: 0 0 12px var(--emerald-glow);
+}
+
+.rl-baylist li {
+  position: relative;
+}
+
+.rl-bay__addr {
+  min-width: 3.2em;
+  color: var(--rl-quiet);
+  font: 400 11px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+}
+
+.rl-bay.is-on .rl-bay__addr {
+  color: var(--emerald-500);
+}
+
+.rl-bay__name {
+  flex: 1;
+}
+
+.rl-bay__icon {
+  display: flex;
+  opacity: 0.55;
+}
+
+.rl-bay.is-on .rl-bay__icon {
+  opacity: 1;
+  color: var(--emerald-300);
+}
+
+.rl-detail {
+  animation: rl-detail-in var(--duration-slow) var(--ease-emphasized) both;
+}
+
+@keyframes rl-detail-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(5px);
+  }
+}
+
+.rl-detail__signal {
+  margin: 0 0 20px;
+  color: var(--emerald-500);
+  font: 400 10.5px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.rl-detail__title {
+  margin: 0 0 16px;
+  max-width: 30ch;
+  font: 500 clamp(1.2rem, 2.2vw, 1.7rem) / 1.25 var(--font-sans);
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.rl-detail__label {
+  margin: 30px 0 12px;
+  color: var(--rl-quiet);
+  font: 400 10.5px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.rl-detail__note {
+  margin: 26px 0 0;
+  padding-top: 18px;
+  border-top: var(--rule);
+  color: var(--rl-quiet);
+  font: var(--text-body-sm);
+}
+
+.rl-crits {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rl-crits li {
+  padding: 6px 12px;
+  border: 1px solid rgba(92, 200, 232, 0.25);
+  border-radius: var(--radius-pill);
+  color: var(--emerald-300);
+  font: 400 11.5px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+}
+
+/* ---- proof ---- */
+
+.rl-proof__head {
+  max-width: 36rem;
+  margin-bottom: clamp(34px, 5vw, 58px);
+}
+
+.rl-synthetic {
+  margin: 18px 0 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--border-strong);
+  color: var(--rl-quiet);
+  font: 400 11.5px/1.5 var(--font-mono);
+}
+
+.rl-turn {
+  display: grid;
+  gap: 18px;
+  max-width: 780px;
+}
+
+.rl-turn__q,
+.rl-turn__a {
+  display: grid;
+  grid-template-columns: 5.5em minmax(0, 1fr);
+  gap: 18px;
+  align-items: baseline;
+  padding-bottom: 18px;
+  border-bottom: var(--rule);
+}
+
+.rl-turn__q p,
+.rl-turn__a p {
+  margin: 0;
+  font: 400 clamp(0.98rem, 1.4vw, 1.08rem) / 1.65 var(--font-sans);
+}
+
+.rl-turn__q p {
+  color: var(--text-primary);
+}
+
+.rl-turn__a p {
+  color: var(--text-secondary);
+}
+
+.rl-turn__who {
+  color: var(--rl-quiet);
+  font: 400 10.5px/1.8 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* The scorecard. This is the one place the page allows a bounded panel, because
+   it is quoting an artifact the product actually renders. */
+.rl-card {
+  margin-top: 10px;
+  padding: 22px 24px 24px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  /* Opaque. This sat behind a backdrop-filter until it was pointed out that the
+     page glow has scrolled away by the time anyone reaches it — the blur was
+     sampling flat canvas and buying a compositing layer for nothing. */
+  background: #161618;
+}
+
+.rl-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.rl-card__label {
+  color: var(--rl-quiet);
+  font: 400 10.5px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.rl-card__overall {
+  font: 500 34px/1 var(--font-mono);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.rl-card__outof {
+  margin-left: 2px;
+  color: var(--rl-quiet);
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+.rl-card__verdict {
+  margin: 14px 0 24px;
+  color: var(--text-primary);
+  font: italic 400 clamp(1rem, 1.6vw, 1.15rem) / 1.5 var(--font-sans);
+}
+
+.rl-card__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px 30px;
+}
+
+.rl-crit__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.rl-crit__name {
+  color: var(--text-primary);
+  font: 500 13px/1.2 var(--font-sans);
+}
+
+.rl-crit__val {
+  font: 500 13px/1.2 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.rl-crit__note {
+  margin: 9px 0 0;
+  color: var(--rl-quiet);
+  font: 400 12px/1.55 var(--font-sans);
+}
+
+.rl-meter {
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.rl-meter i {
+  display: block;
+  height: 100%;
+  width: var(--fill);
+  border-radius: inherit;
+  animation: rl-fill var(--duration-slow) var(--ease-emphasized) both;
+}
+
+@keyframes rl-fill {
+  from {
+    transform: scaleX(0);
+    transform-origin: left center;
+  }
+}
+
+.rl-card__next {
+  margin: 24px 0 0;
+  padding-top: 18px;
+  border-top: var(--rule);
+  color: var(--text-secondary);
+  font: var(--text-body-sm);
+}
+
+.rl-card__next span {
+  margin-right: 10px;
+  color: var(--emerald-500);
+  font: 500 10.5px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* One tone scale for every number on the page, published as two variables
+   rather than as colour and background on the same rule — a numeral and a
+   filled bar want the same band at different lightness, and resolving that with
+   an !important override further down is how a tone scale rots. */
+[data-band='high'] {
+  --band: var(--emerald-300);
+  --band-fill: var(--emerald-500);
+}
+
+[data-band='mid'] {
+  --band: var(--amber-500);
+  --band-fill: var(--amber-500);
+}
+
+[data-band='low'] {
+  --band: var(--red-500);
+  --band-fill: var(--red-500);
+}
+
+.rl-card__overall,
+.rl-crit__val {
+  color: var(--band, var(--text-primary));
+}
+
+.rl-meter i {
+  background: var(--band-fill, var(--emerald-500));
+}
+
+/* ---- trend ---- */
+
+.rl-trend {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(34px, 6vw, 84px);
+  align-items: center;
+}
+
+.rl-trend__lead .rl-prose {
+  margin-top: 18px;
+}
+
+.rl-plot {
+  margin: 0;
+}
+
+.rl-plot figcaption {
+  margin-bottom: 26px;
+  color: var(--rl-quiet);
+  font: 400 11px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* One column template, three rows that each own their own job. The previous
+   version overlapped the bars and the threshold inside a single subgrid, and the
+   threshold collapsed to no width — the line and its label ended up stacked off
+   the left edge. Separate rows cannot do that. */
+.rl-plot__row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.rl-plot__values {
+  align-items: end;
+  margin-bottom: 12px;
+}
+
+/* Monochrome until the threshold is cleared.
+   This chart used to run red / amber / cyan off the scorecard's band scale, which
+   made three big blocks of colour the loudest thing on a page whose whole world
+   is one accent on near-black. The bands are legitimate inside the scorecard —
+   that is quoting an artifact the product really renders — but here they were the
+   page's own voice. Reserving cyan for the one bar that crosses 75 also says the
+   thing the section is about far better than a colour ramp did. */
+.rl-plot__values span {
+  font: 500 22px/1 var(--font-mono);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--rl-quiet);
+}
+
+.rl-plot__values span[data-cleared] {
+  color: var(--emerald-300);
+}
+
+/* A known height, so the threshold can sit at a true percentage of the scale
+   rather than of the whole figure. */
+.rl-plot__area {
+  position: relative;
+  height: 230px;
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.rl-col {
+  position: relative; /* so the tick below anchors to the column, not the plot */
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 100%;
+}
+
+/* A tick under each column, so the baseline reads as an axis with stations on
+   it rather than as an underline. */
+.rl-col::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  width: 1px;
+  height: 4px;
+  background: var(--border-strong);
+}
+
+/* Capped, not full-bleed: a bar the width of its column is a block of colour,
+   and this has to read as a measurement. */
+.rl-col i {
+  display: block;
+  width: 100%;
+  max-width: 76px;
+  height: var(--h);
+  border-radius: 2px 2px 0 0;
+  background: rgba(237, 237, 239, 0.15);
+  animation: rl-rise 720ms var(--ease-emphasized) both;
+}
+
+.rl-col i[data-cleared] {
+  background: var(--emerald-500);
+  box-shadow: 0 0 28px rgba(92, 200, 232, 0.32);
+}
+
+.rl-thresh {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--at);
+  pointer-events: none;
+}
+
+.rl-thresh i {
+  display: block;
+  border-top: 1px dashed rgba(255, 255, 255, 0.28);
+}
+
+/* Left, not right. The threshold sits at 75 and the last bar reaches 84, so a
+   right-aligned label lands on top of the one bar that clears the line and
+   becomes unreadable. The low end of the chart is always the empty end. */
+.rl-thresh em {
+  position: absolute;
+  left: 0;
+  bottom: 6px;
+  color: var(--rl-quiet);
+  font: 400 10.5px/1 var(--font-mono);
+  font-style: normal;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.rl-plot__labels {
+  margin-top: 12px;
+  align-items: start;
+}
+
+.rl-plot__labels > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+@keyframes rl-rise {
+  from {
+    transform: scaleY(0);
+    transform-origin: bottom center;
+  }
+}
+
+.rl-bar__turn {
+  color: var(--text-secondary);
+  font: 400 11px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.rl-bar__label {
+  color: var(--rl-quiet);
+  font: var(--text-body-sm);
+}
+
+.rl-plot__delta {
+  margin: 26px 0 0;
+  padding-top: 16px;
+  border-top: var(--rule);
+  color: var(--text-secondary);
+  font: var(--text-body-sm);
+}
+
+.rl-plot__delta span {
+  margin-right: 8px;
+  color: var(--emerald-300);
+  font: 500 17px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- register ---- */
+
+.rl-register__h {
+  max-width: 26rem;
+  margin-bottom: clamp(34px, 5vw, 56px);
+}
+
+.rl-register ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: var(--rule);
+}
+
+.rl-register li {
+  display: grid;
+  grid-template-columns: 4.5em minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: clamp(16px, 4vw, 52px);
+  align-items: start;
+  padding: clamp(22px, 3vw, 32px) 0;
+  border-bottom: var(--rule);
+}
+
+.rl-register__addr {
+  color: var(--rl-quiet);
+  font: 400 11px/1.6 var(--font-mono);
+  letter-spacing: 0.12em;
+}
+
+.rl-register__claim {
+  margin: 0;
+  font: 500 clamp(1.05rem, 1.9vw, 1.4rem) / 1.25 var(--font-sans);
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.rl-register__body {
+  margin: 0;
+  color: var(--text-secondary);
+  font: var(--text-body-md);
+}
+
+/* ---- access ---- */
+
+.rl-access {
+  min-height: min(62vh, 520px);
+  display: grid;
+  place-items: center;
+}
+
+.rl-access__mid {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  padding: clamp(56px, 9vh, 96px) 24px;
+  text-align: center;
+}
+
+/* ---- foot ---- */
+
+.rl-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 32px 24px 56px;
+  color: var(--rl-quiet);
+  font: 400 11px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.rl-foot a {
+  color: var(--text-secondary);
+}
+
+.rl-foot a:hover {
+  color: var(--emerald-300);
+  text-decoration: none;
+}
+
+/* ------------------------------------------------------------------ *
+ * responsive
+ * ------------------------------------------------------------------ */
+
+@media (max-width: 940px) {
+  .rl-who,
+  .rl-bays__body,
+  .rl-trend {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rl-register li {
+    grid-template-columns: 3.5em minmax(0, 1fr);
+  }
+
+  .rl-register__body {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 680px) {
+  .rl-page {
+    --frame-inset: 10px;
+  }
+
+  .rl-frame {
+    border-radius: 18px;
+  }
+
+  .rl-boot::before {
+    display: none;
+  }
+
+  /* The rail loses its middle readout before it wraps: three items at 360px
+     would each get a third of the width and the brand would break in half. */
+  .rl-rail {
+    padding: 14px 14px;
+  }
+
+  .rl-rail__status {
+    display: none;
+  }
+
+  /* The flanking captions stack under the core rather than squeezing it to a
+     sliver — the object is the point of the viewport. */
+  .rl-core-row {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: 26px;
+  }
+
+  .rl-core {
+    order: -1;
+    width: clamp(120px, 44vw, 168px);
+  }
+
+  .rl-flank--l,
+  .rl-flank--r {
+    text-align: center;
+  }
+
+  .rl-card__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .rl-turn__q,
+  .rl-turn__a {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .rl-plot__row {
+    gap: 10px;
+  }
+
+  .rl-plot__area {
+    height: 180px;
+  }
+
+  .rl-card {
+    padding: 18px 16px 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rl-dot,
+  .rl-detail,
+  .rl-meter i,
+  .rl-col i,
+  .rl-boot,
+  .rl-rail,
+  .rl-boot .rl-display,
+  .rl-core,
+  .rl-flank--l,
+  .rl-flank--r,
+  .rl-boot__act {
+    animation: none;
+  }
+
+  [data-reveal] {
+    transition: none;
+  }
+}

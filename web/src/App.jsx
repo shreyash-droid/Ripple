@@ -22,7 +22,7 @@ import { MODES, modeConfig } from './lib/modes'
 import { collectScorecards, summarizeSession } from './lib/scoring'
 import { extractPdfText } from './lib/pdf'
 import { useAuth } from './lib/auth-context'
-import { displayName, initialsOf } from './lib/session'
+import { displayName, initialsOf, peekPending, stashPending, takePending } from './lib/session'
 import './styles/app.css'
 
 // The stage is a 250vh scroller with a sticky 100vh viewport, so the usable
@@ -59,8 +59,16 @@ function clearRoute() {
   window.history.pushState(null, '', window.location.pathname + window.location.search)
 }
 
+/* Sends the visitor to the sign-in route, keeping the message they composed.
+   pushState rather than replace: Back should return them to the thread they were
+   typing in, not out of the app entirely. */
+function requestSignIn(message, mode) {
+  if (message) stashPending(message, mode)
+  window.location.hash = '#/signin'
+}
+
 export default function App() {
-  const { user, signOut } = useAuth()
+  const { user, signedIn, signOut } = useAuth()
   const rootRef = useRef(null)
   const progressRef = useRef(0)
   const loadedIdRef = useRef(null)
@@ -87,7 +95,11 @@ export default function App() {
   const [activeId, setActiveId] = useState(() => readRoute().conversationId)
   const [messages, setMessages] = useState([])
   const [draft, setDraft] = useState('')
-  const [mode, setMode] = useState('general')
+  /* A message stashed on the way to sign-in was composed in a particular mode,
+     and it has to be sent back in that mode or it meets the wrong rubric. Adopted
+     in the initial state, not in an effect, so `send` below already closes over
+     the right mode on the very first render and needs no resequencing. */
+  const [mode, setMode] = useState(() => peekPending()?.mode || 'general')
   // a mode the user has asked for but not yet confirmed, since switching ends
   // the current chat; null when nothing is being asked
   const [pendingMode, setPendingMode] = useState(null)
@@ -250,15 +262,19 @@ export default function App() {
    * data
    * ---------------------------------------------------------------- */
 
+  /* Anonymous visitors have no conversations to list, and asking anyway would
+     spend a 401 that the unauthorized handler reads as an expired session. */
   const refreshConversations = useCallback(
     () =>
-      listConversations()
-        .then((rows) => {
-          setConversations(rows)
-          return rows
-        })
-        .catch(() => []),
-    [],
+      signedIn
+        ? listConversations()
+            .then((rows) => {
+              setConversations(rows)
+              return rows
+            })
+            .catch(() => [])
+        : Promise.resolve([]),
+    [signedIn],
   )
 
   useEffect(() => {
@@ -274,7 +290,7 @@ export default function App() {
   // we just created by sending are pre-marked in loadedIdRef so we don't
   // refetch over the reply that is still streaming in.
   useEffect(() => {
-    if (activeId == null || loadedIdRef.current === activeId) return
+    if (!signedIn || activeId == null || loadedIdRef.current === activeId) return
     loadedIdRef.current = activeId
     let cancelled = false
     getMessages(activeId)
@@ -287,7 +303,10 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [activeId])
+    // signedIn matters: the early return above leaves loadedIdRef untouched, so
+    // without it a conversation opened before signing in would never load its
+    // history afterwards.
+  }, [activeId, signedIn])
 
   /* ---------------------------------------------------------------- *
    * actions
@@ -313,6 +332,17 @@ export default function App() {
        is now part of a message in the thread, so re-sending it on the next turn
        would submit the resume twice. */
     const outgoing = attached ? withResume(attached, text) : text
+
+    /* The one moment we ask who they are. Deliberately after the resume has been
+       folded in, so someone who attached a PDF and pressed send does not have to
+       attach it again on the other side of the login. Nothing is cleared here —
+       App is about to unmount, and if they abandon the sign-in the thread should
+       be exactly as they left it. */
+    if (!signedIn) {
+      requestSignIn(outgoing, mode)
+      return
+    }
+
     if (attached) setResume(null)
 
     enterChat()
@@ -379,6 +409,20 @@ export default function App() {
     }
   }
 
+  /* The other side of the gate: send what they composed before signing in.
+     `send` is rebuilt every render, so it is reached through a ref rather than
+     named as a dependency — this has to fire once on arrival, not again on every
+     keystroke. takePending clears as it reads, which is also what makes a
+     double-invoked StrictMode effect harmless. */
+  const sendRef = useRef(null)
+  sendRef.current = send
+
+  useEffect(() => {
+    if (!signedIn) return
+    const pending = takePending()
+    if (pending?.message) sendRef.current?.(pending.message)
+  }, [signedIn])
+
   /* Reviewer's upload. Reads the file in the browser and stops — no request, no
      ingestion queue — because the text is destined for the next message rather
      than for a vector store. */
@@ -415,6 +459,15 @@ export default function App() {
 
   const handleUpload = async (file) => {
     if (!file) return
+
+    /* Unlike a resume, a Q&A document cannot be read in the browser and held —
+       it has to be embedded server-side to be retrievable, so this is the one
+       attachment that needs a token before it can even start. There is no
+       message to stash; they pick the file again on the other side. */
+    if (!signedIn) {
+      requestSignIn(null, mode)
+      return
+    }
 
     // a second upload supersedes one still being embedded
     uploadAbortRef.current?.abort()
@@ -605,7 +658,7 @@ export default function App() {
 
           <Hero />
 
-          <TopBar user={identity} />
+          <TopBar user={identity} signedIn={signedIn} />
 
           <div className="h2c-chat">
             {!sidebarCollapsed && (
@@ -626,6 +679,7 @@ export default function App() {
               onRename={renameChat}
               onDelete={deleteChat}
               user={identity}
+              signedIn={signedIn}
               onLogout={signOut}
               collapsed={sidebarCollapsed}
               onToggle={() => setSidebarCollapsed((v) => !v)}

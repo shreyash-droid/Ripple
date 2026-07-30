@@ -155,6 +155,17 @@ export function LogOutIcon({ size = 15 }) {
   )
 }
 
+/** The invitation, for a visitor who has not signed in yet. */
+export function LogInIcon({ size = 15 }) {
+  return (
+    <Svg size={size} strokeWidth={1.6}>
+      <path d="M15 20h3a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3" />
+      <path d="m9.5 16 4-4-4-4" />
+      <path d="M13.5 12H3.5" />
+    </Svg>
+  )
+}
+
 /* Google's mark. Multi-colour by definition, so it opts out of the shared Svg
    wrapper's currentColor stroke entirely. */
 export function GoogleIcon({ size = 17 }) {

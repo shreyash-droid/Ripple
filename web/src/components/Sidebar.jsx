@@ -1,6 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import ProfileBadge from './ProfileBadge'
-import { LogOutIcon, MoreIcon, PanelLeftIcon, PencilIcon, PlusIcon, TrashIcon } from './Icons'
+import {
+  LogInIcon,
+  LogOutIcon,
+  MoreIcon,
+  PanelLeftIcon,
+  PencilIcon,
+  PlusIcon,
+  TrashIcon,
+} from './Icons'
 
 // Roughly how tall the menu gets, used only to keep it on screen near the
 // bottom edge. Over-estimating costs a few px of gap; under-estimating would
@@ -68,6 +76,7 @@ export default function Sidebar({
   onRename,
   onDelete,
   user,
+  signedIn,
   onLogout,
   collapsed,
   onToggle,
@@ -157,20 +166,28 @@ export default function Sidebar({
         </div>
 
         <div className="h2c-rail__foot">
-          <ProfileBadge
-            user={user}
-            avatarClassName="h2c-sidebar__user-avatar"
-            placement="top-start"
-          />
-          <button
-            type="button"
-            className="h2c-railbtn"
-            onClick={onLogout}
-            aria-label="Log out"
-            title="Log out"
-          >
-            <LogOutIcon size={16} />
-          </button>
+          {signedIn ? (
+            <>
+              <ProfileBadge
+                user={user}
+                avatarClassName="h2c-sidebar__user-avatar"
+                placement="top-start"
+              />
+              <button
+                type="button"
+                className="h2c-railbtn"
+                onClick={onLogout}
+                aria-label="Log out"
+                title="Log out"
+              >
+                <LogOutIcon size={16} />
+              </button>
+            </>
+          ) : (
+            <a className="h2c-railbtn" href="#/signin" aria-label="Log in" title="Log in">
+              <LogInIcon size={16} />
+            </a>
+          )}
         </div>
       </aside>
     )
@@ -311,24 +328,37 @@ export default function Sidebar({
         </div>
       )}
 
+      {/* Anonymous visitors get the whole app, so this row cannot assume there is
+          an account behind it: an avatar reading "·" beside a log-out button for
+          someone who never logged in is chrome describing a state that does not
+          exist. They get the invitation instead. */}
       <div className="h2c-sidebar__user">
-        <ProfileBadge
-          user={user}
-          avatarClassName="h2c-sidebar__user-avatar"
-          placement="top-start"
-        />
-        <span className="h2c-sidebar__user-name" title={user.name}>
-          {user.name}
-        </span>
-        <button
-          type="button"
-          className="h2c-logout"
-          onClick={onLogout}
-          aria-label="Log out"
-          title="Log out"
-        >
-          <LogOutIcon />
-        </button>
+        {signedIn ? (
+          <>
+            <ProfileBadge
+              user={user}
+              avatarClassName="h2c-sidebar__user-avatar"
+              placement="top-start"
+            />
+            <span className="h2c-sidebar__user-name" title={user.name}>
+              {user.name}
+            </span>
+            <button
+              type="button"
+              className="h2c-logout"
+              onClick={onLogout}
+              aria-label="Log out"
+              title="Log out"
+            >
+              <LogOutIcon />
+            </button>
+          </>
+        ) : (
+          <a className="h2c-signin" href="#/signin">
+            <LogInIcon size={15} />
+            Log in to save your chats
+          </a>
+        )}
       </div>
     </aside>
   )

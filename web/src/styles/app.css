@@ -293,6 +293,87 @@
   color: var(--text-primary);
 }
 
+/* ---- hero nav ---- */
+
+/* Centred in the rail by taking the free space on both sides, so the brand and
+   the account slot stay pinned to the edges whatever the nav contains. */
+.h2c-topnav {
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* The landing page's bracketed command, restated here so the link into it looks
+   like its destination. Brackets are drawn in CSS, keeping the accessible name
+   "How it works" rather than "[ How it works ]". */
+.h2c-navcmd {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 8px 4px;
+  color: var(--text-secondary);
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.h2c-navcmd::before,
+.h2c-navcmd::after {
+  color: var(--text-tertiary);
+  transition: transform var(--duration-base) var(--ease-emphasized),
+    color var(--duration-base) var(--ease-standard);
+}
+
+.h2c-navcmd::before {
+  content: '[';
+}
+
+.h2c-navcmd::after {
+  content: ']';
+}
+
+.h2c-navcmd:hover {
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.h2c-navcmd:hover::before {
+  transform: translateX(-3px);
+  color: var(--emerald-500);
+}
+
+.h2c-navcmd:hover::after {
+  transform: translateX(3px);
+  color: var(--emerald-500);
+}
+
+.h2c-navcmd.is-accent {
+  color: var(--emerald-300);
+}
+
+/* This link is the only route to the landing page anywhere in the client, so it
+   survives every width. It was briefly hidden under 600px on the theory that the
+   page was reachable some other way; it is not. It tightens instead. */
+@media (max-width: 600px) {
+  .h2c-navcmd {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    gap: 0.35em;
+    padding: 8px 2px;
+  }
+}
+
+/* At the narrowest widths the wordmark is what gives way — the orb still carries
+   the brand, and both commands stay reachable. */
+@media (max-width: 420px) {
+  .h2c-brand__name {
+    display: none;
+  }
+}
+
 .h2c-avatar {
   width: 32px;
   height: 32px;
@@ -830,6 +911,29 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+/* Fills the account row for a visitor who has not signed in. Full width and
+   quiet: it is an invitation at the bottom of the panel, not a call to action
+   competing with the composer. */
+.h2c-signin {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font: var(--text-body-sm);
+  text-decoration: none;
+  transition: background var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.h2c-signin:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  text-decoration: none;
 }
 
 /* A button now, not a div — it triggers the account popover. The reset keeps it
