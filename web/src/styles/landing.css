@@ -509,6 +509,30 @@
   text-align: center;
 }
 
+/* A rule and its own margin, because this is the one claim on the page about
+   something that is not built yet — it has to read as a note under the close,
+   not as a fourth thing the section is offering. */
+.rl-access__soon {
+  margin: 6px 0 0;
+  padding-top: 20px;
+  border-top: var(--rule);
+  max-width: 46ch;
+  color: var(--rl-quiet);
+  font: var(--text-body-sm);
+  text-align: center;
+}
+
+/* Same eyebrow as the scorecard's "Next" — the page already uses a mono accent
+   caps label to mean "what comes after this", and a coming-soon note is exactly
+   that at the scale of the product rather than the answer. */
+.rl-access__soon span {
+  margin-right: 10px;
+  color: var(--emerald-500);
+  font: 500 10.5px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
 /* ------------------------------------------------------------------ *
  * sections
  * ------------------------------------------------------------------ */
@@ -961,22 +985,15 @@
   margin-bottom: 12px;
 }
 
-/* Monochrome until the threshold is cleared.
-   This chart used to run red / amber / cyan off the scorecard's band scale, which
-   made three big blocks of colour the loudest thing on a page whose whole world
-   is one accent on near-black. The bands are legitimate inside the scorecard —
-   that is quoting an artifact the product really renders — but here they were the
-   page's own voice. Reserving cyan for the one bar that crosses 75 also says the
-   thing the section is about far better than a colour ramp did. */
+/* Each numeral takes its own bar's band, so the column reads as one object
+   rather than a grey number sitting on a red bar. --band, not --band-fill: the
+   fill tones are pitched for a solid block, and the high band needs to come up a
+   step to hold its weight as 22px of type on near-black. */
 .rl-plot__values span {
   font: 500 22px/1 var(--font-mono);
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
-  color: var(--rl-quiet);
-}
-
-.rl-plot__values span[data-cleared] {
-  color: var(--emerald-300);
+  color: var(--band, var(--rl-quiet));
 }
 
 /* A known height, so the threshold can sit at a true percentage of the scale
@@ -1009,18 +1026,22 @@
 
 /* Capped, not full-bleed: a bar the width of its column is a block of colour,
    and this has to read as a measurement. */
+/* Red → amber → cyan, off the same band scale the scorecard uses. The colour is
+   the argument: a monochrome ramp made the three bars read as three heights of
+   the same thing, when the point is that the answer changed grade. The glow
+   still belongs only to the bar that crosses 75 — the ramp says "it moved", the
+   glow says "it arrived". */
 .rl-col i {
   display: block;
   width: 100%;
   max-width: 76px;
   height: var(--h);
   border-radius: 2px 2px 0 0;
-  background: rgba(237, 237, 239, 0.15);
+  background: var(--band-fill, rgba(237, 237, 239, 0.15));
   animation: rl-rise 720ms var(--ease-emphasized) both;
 }
 
 .rl-col i[data-cleared] {
-  background: var(--emerald-500);
   box-shadow: 0 0 28px rgba(92, 200, 232, 0.32);
 }
 

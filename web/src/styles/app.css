@@ -514,10 +514,16 @@
   opacity: clamp(0, calc(1 - var(--p, 0) * 1.6), 1);
 }
 
+/* Lowered from 24%: the composer rests 40vh off the bottom at the hero (--drop
+   below), and at 24% the copy floated in the upper third with a dead band
+   between it and the one thing you can actually type into. The -20px is held
+   apart from the 32% on purpose — the percentage is where the block belongs in
+   the viewport, the pixels are the breathing room above the composer, and only
+   the second one is a fixed distance. */
 .h2c-hero {
   position: absolute;
   left: 50%;
-  top: 24%;
+  top: calc(32% - 50px);
   transform: translateX(-50%) translateY(calc(var(--p, 0) * -60px))
     scale(calc(1 - var(--p, 0) * 0.06));
   display: flex;
@@ -2110,7 +2116,7 @@
   }
 
   .h2c-hero {
-    top: 20%;
+    top: calc(26% - 50px);
     gap: 16px;
     width: min(760px, 88vw);
   }

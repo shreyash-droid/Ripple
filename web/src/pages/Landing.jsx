@@ -225,7 +225,12 @@ export default function Landing() {
         <div className="rl-field" aria-hidden="true" />
 
         <header className="rl-rail">
-          <a className="rl-brand" href="#/c">
+          {/* Bare '#', not '#/c'. The wordmark is "go back to the top of the
+              product", and #/c is the entered state — App's readRoute treats it
+              as a committed conversation and retires the hero before it ever
+              renders. Anything that is not #/c leaves the stage at progress 0,
+              which is the hero. */}
+          <a className="rl-brand" href="#">
             <span className="rl-orb" aria-hidden="true" />
             <span className="rl-brand__name">Ripple</span>
           </a>
@@ -459,7 +464,10 @@ export default function Landing() {
               of "the grid, labels included". */}
           <div className="rl-plot__row rl-plot__values">
             {TREND.map((t) => (
-              <span key={t.turn} data-cleared={t.score >= STRONG || undefined}>
+              <span
+                key={t.turn}
+                data-band={t.score >= 70 ? 'high' : t.score >= 45 ? 'mid' : 'low'}
+              >
                 {t.score}
               </span>
             ))}
@@ -470,6 +478,7 @@ export default function Landing() {
               <div className="rl-col" key={t.turn}>
                 <i
                   style={{ '--h': `${t.score}%` }}
+                  data-band={t.score >= 70 ? 'high' : t.score >= 45 ? 'mid' : 'low'}
                   data-cleared={t.score >= STRONG || undefined}
                 />
               </div>
@@ -528,6 +537,13 @@ export default function Landing() {
           </Command>
           <p className="rl-access__hint">
             Browse every mode first. We ask who you are only when you send your first message.
+          </p>
+          {/* Below the hint and behind a rule, not beside the button: a thing
+              that does not exist yet cannot sit at the same level as the one
+              action this page is asking for. */}
+          <p className="rl-access__soon">
+            <span>Soon</span> A dashboard — every session in one place, so you can track your
+            progress across modes and see what to work on next.
           </p>
         </div>
       </section>

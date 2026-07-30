@@ -2,8 +2,11 @@
 
 ## What it is
 
-A chat product where a "mode" is a **workflow with a rubric**, not a prompt persona.
-Four modes, one per conversation:
+**A skills platform**, not a chat product. The promise is that you get measurably better
+at the things you are assessed on; chat is the interface, not the offer.
+
+A "mode" is a **workflow with a rubric**, not a prompt persona. Four modes, one per
+conversation, each one a surface you practise a different skill on:
 
 | Mode | What it does | Scored |
 |---|---|---|

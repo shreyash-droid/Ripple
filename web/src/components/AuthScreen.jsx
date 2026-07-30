@@ -66,7 +66,7 @@ export default function AuthScreen() {
   const nameRef = useRef(null)
   const emailRef = useRef(null)
   const passwordRef = useRef(null)
-  // BinaryWaves is scroll-driven in the app; here it just sits at its resting
+  // AsciiField is scroll-driven in the app; here it just sits at its resting
   // state, so it gets a progress ref that never moves.
   const progressRef = useRef(0)
 
@@ -192,7 +192,7 @@ export default function AuthScreen() {
 
           <div className="auth__pitch">
             <h1 className="auth__headline">
-              AI that adapts to <em>how you think</em>
+              Sharpen what <em>you&apos;re measured on</em>
             </h1>
             <p className="auth__sub">
               One account, four ways of working. Your conversations stay yours.
