@@ -590,10 +590,14 @@ export default function Landing() {
         </header>
 
         <div className="rl-boot__mid">
+          {/* The operative word carries the emphasis. <em> rather than a span
+              because this is stress emphasis in the sentence, not decoration on
+              a syllable — the styling then turns off the italic the tag brings
+              with it. */}
           <h1 className="rl-display">
             You can&apos;t improve
             <br />
-            what nobody scores.
+            what nobody <em className="rl-display__key">scores.</em>
           </h1>
 
           <div className="rl-core-row">

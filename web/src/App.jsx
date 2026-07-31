@@ -374,7 +374,13 @@ export default function App() {
         data = await askDocument({ question: text, documentId })
         replyText = data.answer ?? ''
       } else {
-        data = await sendChat({ message: outgoing, mode, conversationId: activeId })
+        data = await sendChat({
+          message: outgoing,
+          mode,
+          conversationId: activeId,
+          // this turn is the resume arriving, not a question about it
+          attachment: Boolean(attached),
+        })
         replyText = data.reply ?? ''
         // the server runs the conversation's own mode, so if the two ever drift
         // the pill follows the turn that actually happened

@@ -4,6 +4,7 @@ import {
   MODE_WORKFLOWS,
   composeReply,
   envelopeInstructions,
+  followUpInstructions,
   normaliseScorecard,
 } from "./rubrics.js";
 
@@ -46,16 +47,30 @@ export async function generateReply({ mode, message, history = [] }) {
  * numbers buried in prose.
  *
  * Returns { reply, scorecard }. `scorecard` is null whenever the turn was not
- * scoreable: an unscored mode, a message the model judged not to be an attempt
- * (setting up the session, a follow-up question), or a model reply that broke
- * the contract. A null scorecard is a normal outcome, not an error — the
- * frontend simply shows no card for that turn.
+ * scoreable: an unscored mode, a turn the caller ruled out of scoring, a message
+ * the model judged not to be an attempt (setting up the session, a follow-up
+ * question), or a model reply that broke the contract. A null scorecard is a
+ * normal outcome, not an error — the frontend simply shows no card for that turn.
+ *
+ * `allowScore: false` closes the door on scoring before the model is asked,
+ * rather than asking it and discarding the answer. It matters that this is the
+ * order: the envelope makes a score the expected output, and a model handed the
+ * envelope produces one whether or not there is anything new to score.
  */
-export async function generateTurn({ mode, message, history = [] }) {
+export async function generateTurn({ mode, message, history = [], allowScore = true }) {
   const workflow = workflowFor(mode);
 
   if (!workflow.scored) {
     const reply = await complete({ system: workflow.system, message, history });
+    return { reply, scorecard: null };
+  }
+
+  if (!allowScore) {
+    const reply = await complete({
+      system: `${workflow.system}\n\n${followUpInstructions(workflow)}`,
+      message,
+      history,
+    });
     return { reply, scorecard: null };
   }
 

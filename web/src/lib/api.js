@@ -96,10 +96,19 @@ export function deleteConversation(conversationId) {
   return request(`/api/conversations/${conversationId}`, { method: 'DELETE' })
 }
 
-export function sendChat({ message, mode, conversationId }) {
+/* `attachment` marks the turn that submits a file. The resume is folded into the
+   message text before it gets here, so by the time the server sees it there is
+   nothing to distinguish "here is my resume" from "about that bullet in my
+   resume" — and the reviewer only scores the first kind. */
+export function sendChat({ message, mode, conversationId, attachment = false }) {
   return request('/api/chat', {
     method: 'POST',
-    body: JSON.stringify({ message, mode, conversationId: conversationId ?? undefined }),
+    body: JSON.stringify({
+      message,
+      mode,
+      conversationId: conversationId ?? undefined,
+      attachment,
+    }),
   })
 }
 

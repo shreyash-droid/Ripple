@@ -173,6 +173,27 @@
   color: var(--text-primary);
 }
 
+/* One word carries the line.
+ *
+ * Colour and size only — the weight stays exactly where the rest of the display
+ * is. Three signals stacked on one word is shouting; two is emphasis, and the
+ * word is already the last thing in the sentence, which is the strongest
+ * position it can occupy before any styling is applied at all.
+ *
+ * emerald-300, not the 500: the system's own split is that the 500 is light to
+ * be seen and the 300 is cyan to be READ. This is a word in a sentence.
+ *
+ * The size bump is 6%. Larger and the cap-heights visibly disagree along the
+ * baseline, which reads as a font-loading fault rather than as emphasis. */
+.rl-display__key {
+  font-style: normal;
+  font-size: 1.06em;
+  /* Cancels the inherited multiplier against the larger size (1.06 × 0.963 ≈
+     1.02), so the emphasised word cannot open up the leading of its own line. */
+  line-height: 0.963;
+  color: var(--emerald-300);
+}
+
 .rl-display--sm {
   font-size: clamp(1.9rem, 5.4vw, 3.6rem);
 }

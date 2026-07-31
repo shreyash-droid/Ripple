@@ -9,7 +9,10 @@ export const handler = async (event) => {
 
     // The frontend sends JSON in the request body; parse it.
     const body = JSON.parse(event.body || "{}");
-    const { message, mode = "general" } = body;
+    // `attachment` says this turn is submitting a file, not just talking about
+    // one. Only the client knows that — by the time the resume reaches us it is
+    // ordinary text in the middle of a message.
+    const { message, mode = "general", attachment = false } = body;
     let { conversationId } = body;
     // A conversation runs in exactly one mode. For a new chat that is whatever
     // the client asked for; for an existing one it is whatever the conversation
@@ -74,11 +77,47 @@ export const handler = async (event) => {
       [conversationId, "user", message, userId]
     );
 
-    // 4. Run the mode's workflow. Evaluative modes (coach, reviewer) also return
-    //    a scorecard; the rest return scorecard: null.
-    const { reply, scorecard } = await generateTurn({ mode: effectiveMode, message, history });
+    /* 4. Decide whether this turn is allowed to score.
+     *
+     * Reviewer only. Coach scores every answer because every answer is a new
+     * attempt — that is the mode. A resume is not: it is submitted once and then
+     * discussed, so re-scoring it on "how should I word the summary?" produced a
+     * second card with a near-identical number, and a session trend that moved
+     * without the resume having changed. Worse, the numbers did drift a little
+     * turn to turn, which reads as progress the user did not make.
+     *
+     * A resume turn is one that submits a resume: the attachment turn, or the
+     * first submission in the conversation, which is how a pasted resume arrives
+     * (reviewer's composer invites either). After that the resume has a score,
+     * and later turns answer questions about it — until a new file is attached,
+     * which is a new resume and earns a new card.
+     */
+    let allowScore = true;
+    if (effectiveMode === "reviewer" && !attachment) {
+      /* `meta->'scorecard' IS NOT NULL` rather than the jsonb `?` operator: a
+         bare ? in a query string is the placeholder syntax for half the drivers
+         in the ecosystem, and this one is one migration away from being read by
+         something that would rewrite it. */
+      const scored = await query(
+        `SELECT 1 FROM messages
+         WHERE conversation_id = $1 AND role = 'assistant'
+           AND meta->'scorecard' IS NOT NULL
+         LIMIT 1`,
+        [conversationId]
+      );
+      allowScore = scored.length === 0;
+    }
 
-    // 5. Save the assistant's reply, with the scorecard alongside it. It lives on
+    // 5. Run the mode's workflow. Evaluative modes (coach, reviewer) also return
+    //    a scorecard; the rest return scorecard: null.
+    const { reply, scorecard } = await generateTurn({
+      mode: effectiveMode,
+      message,
+      history,
+      allowScore,
+    });
+
+    // 6. Save the assistant's reply, with the scorecard alongside it. It lives on
     //    the message rather than on the conversation so reopening a chat restores
     //    every card and the session trend rebuilds itself from history.
     const saved = await query(
@@ -93,13 +132,13 @@ export const handler = async (event) => {
       ]
     );
 
-    // 6. Bump the conversation's updated_at so recent chats sort to top later.
+    // 7. Bump the conversation's updated_at so recent chats sort to top later.
     await query(
       "UPDATE conversations SET updated_at = now() WHERE id = $1",
       [conversationId]
     );
 
-    // 7. Return everything the frontend needs.
+    // 8. Return everything the frontend needs.
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },

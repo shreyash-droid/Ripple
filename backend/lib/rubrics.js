@@ -199,6 +199,24 @@ export function envelopeInstructions(workflow) {
   );
 }
 
+/* What a scored mode is told on a turn that is NOT allowed to score.
+ *
+ * The envelope is not sent at all on these turns, so this replaces it rather
+ * than qualifying it. Both sentences earn their place: without the first the
+ * model re-reviews the resume it can still see in the history, and without the
+ * second it answers the question and then volunteers a fresh set of scores in
+ * prose — which is the same defect wearing a different format. */
+export function followUpInstructions(workflow) {
+  return (
+    `The ${workflow.subject} in this conversation has already been reviewed and scored. ` +
+    "Do not score it again, and do not produce another review, rubric or set of numbers " +
+    "in any form.\n\n" +
+    `Answer the user's question directly, using the ${workflow.subject} earlier in this ` +
+    "conversation as your context. Be as specific as the review was — quote their own " +
+    "lines back when it helps. Reply in markdown prose."
+  );
+}
+
 /* Trust nothing from the model: clamp the scores, drop keys we did not ask for,
    and attach the display label so a persisted scorecard stays readable even if
    the rubric is later reworded. Returns null when too little came back to be
