@@ -313,7 +313,11 @@
   gap: 0.5em;
   padding: 8px 4px;
   color: var(--text-secondary);
-  font: 500 11px/1 var(--font-mono);
+  /* 12.5px, up from 11. These two are the only chrome on the hero and both are
+     destinations — the one route to the landing page and the one route to an
+     account — so they were being quiet about the wrong thing. Tracking stays at
+     0.14em because it is set in em and scales with the size on its own. */
+  font: 500 12.5px/1 var(--font-mono);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   text-decoration: none;
@@ -359,7 +363,7 @@
    page was reachable some other way; it is not. It tightens instead. */
 @media (max-width: 600px) {
   .h2c-navcmd {
-    font-size: 10px;
+    font-size: 11px;
     letter-spacing: 0.08em;
     gap: 0.35em;
     padding: 8px 2px;
