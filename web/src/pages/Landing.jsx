@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { DocIcon, ResumeIcon, SparkIcon, TargetIcon } from '../components/Icons'
 import '../styles/landing.css'
 
@@ -10,22 +10,35 @@ import '../styles/landing.css'
  *   — because Ripple's claim is not "we have features", it is "you will be
  *   measured, and the number will move".
  *
- * OWN-WORLD: One inset console frame on a near-black field lit by a single
- *   ice-cyan wash. Hairline rules and a dotted grid instead of cards. Bracketed
- *   mono is the entire button vocabulary; JetBrains Mono carries only addresses
- *   and measurements, Inter carries voice at extreme size contrast. No second
- *   hue, no gradient text, no glass for decoration.
+ * OWN-WORLD: A near-black console field lit by a single ice-cyan wash — full
+ *   bleed at the open, an inset frame at the close. Hairline rules and a dotted
+ *   grid instead of cards. Bracketed mono is the entire button vocabulary;
+ *   JetBrains Mono carries only addresses and measurements, Inter carries voice
+ *   at extreme size contrast. No gradient text, no glass for decoration. The
+ *   one hue is the accent; red and amber appear only as the published score
+ *   bands, never as decoration.
  *
  * STORY: A skeptic who has used generic AI chat sees a real scored turn happen,
  *   understands four modes means four rubrics, believes the score because the
  *   criteria and their notes are on the page, and presses START A CHAT.
  *
- * FIRST VIEWPORT: Cyan-to-black vertical wash. Console frame inset 20px with a
- *   hairline border and dotted field. Top rail: brand left, status readout
- *   centre, [ START A CHAT ] right. Centre: two lines of uppercase display at
- *   clamp(2.1rem, 7.4vw, 5.5rem), then the glowing core tile flanked
- *   symmetrically by two mono captions. Primary action — the same [ START A
- *   CHAT ], loud — sits bottom-centre in the frame, and the frame boots.
+ * FIRST VIEWPORT: Cyan-to-black vertical wash, full bleed — no stroke, no
+ *   radius, no inset, and the dotted field runs to both edges of the screen.
+ *   Top rail: brand left, status readout centre, [ START A CHAT ] right.
+ *   Centre: two lines of uppercase display at clamp(2.1rem, 7.4vw, 5.5rem),
+ *   then the mark at scale — a lit sphere in three banks of drifting fog, ringed
+ *   by four tilted orbits that pass behind it and back out, two of them carrying
+ *   a travelling dash — flanked symmetrically by two mono captions. The
+ *   assembly is layered, never 3D: far arcs, sphere, near arcs, fog. Primary
+ *   action — the same
+ *   [ START A CHAT ], loud — sits bottom-centre, and the view boots.
+ *
+ * ONE INTERACTION: the pointer is the light. This world is lit by a single
+ *   ice-cyan source, so moving across the first viewport moves that source —
+ *   the terminator swings round the sphere, the specular follows it, the fog
+ *   parallaxes the other way and the orbits roll with it. A sphere proves it
+ *   has a form by being lit from somewhere, which is the one thing the flat
+ *   tile could not do.
  *
  * FORM: Candidate 7 of 7 on the grounded list — "the surface as a system coming
  *   online". Seed key 079787b2, surface scope, degraded roll (no challengers
@@ -205,6 +218,169 @@ function Command({ href, children, tone = 'default', onClick }) {
   )
 }
 
+/* The core object: the brand mark as a lit sphere in a bank of fog.
+ *
+ * The interaction is the page's own premise made literal. This whole world is
+ * described as "lit by a single ice-cyan wash" — so the pointer *is* that light.
+ * Moving it across the first viewport moves the terminator round the sphere and
+ * pushes the fog the other way, which is the one thing a sphere can do that a
+ * flat tile cannot: prove it has a form by being lit from somewhere.
+ *
+ * Written straight to the element's style rather than through state. A pointer
+ * moving across the hero fires ~120 events a second; re-rendering the tree at
+ * that rate to move a gradient would be absurd, and the values are only ever
+ * read by CSS. One rAF coalesces a burst of moves into a single write.
+ */
+const LIGHT = { x: [22, 60], y: [16, 54], rest: [35, 30], drift: 13, roll: 7 }
+const mix = (r, t) => r[0] + (r[1] - r[0]) * t
+
+/* The orbits. Four rings around the mark, each a tilted ellipse — which on
+ * screen is the same thing as a circle seen edge-on from somewhere else.
+ *
+ * Every ring is cut into two halves and the sphere is stacked between them, so
+ * a ring genuinely passes behind the mark and comes back out the other side.
+ * That split is the whole illusion: an ellipse drawn in one piece over a sphere
+ * is a hoop painted on a ball, and no amount of glow rescues it.
+ *
+ * Semi-major axes all clear the sphere (radius 117 in these units) so the rings
+ * emerge at the sides; the semi-minor axes are small, so each ring crosses the
+ * face as a near-flat line — the read that says "tilted circle" rather than
+ * "oval". `flow` rings carry a travelling dash, which is the field-line effect:
+ * not a bead going round a track, but the line itself in motion.
+ */
+const ORB = { c: 150, r: 117 }
+
+const ORBITS = [
+  { a: 148, b: 38, rot: -18, flow: '4.6s', w: 1.1 },
+  { a: 168, b: 23, rot: 33, w: 1 },
+  { a: 139, b: 62, rot: 85, flow: '7.4s', w: 1.05, rev: true },
+  { a: 176, b: 15, rot: 126, w: 0.85 },
+]
+
+/* Sampled rather than built from an SVG arc command: `A` picks its half by way
+   of two flags whose meaning flips with the sweep direction, and the one thing
+   this figure cannot afford is a ring whose front half is quietly its back. */
+const halfArc = (a, b, from, to, n = 40) => {
+  const pts = []
+  for (let i = 0; i <= n; i++) {
+    const t = from + ((to - from) * i) / n
+    pts.push(`${(ORB.c + a * Math.cos(t)).toFixed(1)} ${(ORB.c + b * Math.sin(t)).toFixed(1)}`)
+  }
+  return `M${pts.join('L')}`
+}
+
+const RINGS = ORBITS.map((o, i) => ({
+  ...o,
+  i,
+  // y is down in SVG, so negative sine is the top of the ellipse — the far side.
+  back: halfArc(o.a, o.b, Math.PI, Math.PI * 2),
+  front: halfArc(o.a, o.b, 0, Math.PI),
+}))
+
+function Orbits({ layer }) {
+  return (
+    <svg
+      className={`rl-orbits rl-orbits--${layer}`}
+      viewBox="0 0 300 300"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {RINGS.map((ring) => (
+        <path
+          key={ring.i}
+          className={`rl-orbit${ring.flow ? ' rl-orbit--flow' : ''}`}
+          d={ring[layer]}
+          transform={`rotate(${ring.rot} ${ORB.c} ${ORB.c})`}
+          style={{ '--w': ring.w, '--dur': ring.flow, '--dir': ring.rev ? 1 : -1 }}
+        />
+      ))}
+    </svg>
+  )
+}
+
+function Core() {
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const el = ref.current
+    const host = el?.closest('.rl-boot')
+    if (!host) return undefined
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return undefined
+
+    let frame = 0
+    let next = null
+
+    const write = () => {
+      frame = 0
+      if (!next || !ref.current) return
+      const s = ref.current.style
+      s.setProperty('--lx', `${next.lx.toFixed(1)}%`)
+      s.setProperty('--ly', `${next.ly.toFixed(1)}%`)
+      s.setProperty('--dx', `${next.dx.toFixed(1)}px`)
+      s.setProperty('--dy', `${next.dy.toFixed(1)}px`)
+      s.setProperty('--roll', `${next.roll.toFixed(2)}deg`)
+    }
+
+    /* The listener is on the whole first viewport, not on the sphere: an object
+       that only wakes up when you touch it is a button, and this is a light. */
+    const onMove = (e) => {
+      const r = host.getBoundingClientRect()
+      const nx = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width))
+      const ny = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))
+      next = {
+        lx: mix(LIGHT.x, nx),
+        ly: mix(LIGHT.y, ny),
+        /* Fog against the light, sphere with it — the parallax is what keeps
+           the two from reading as one flat sticker. */
+        dx: (0.5 - nx) * LIGHT.drift * 2,
+        dy: (0.5 - ny) * LIGHT.drift,
+        /* The rings turn with the pointer. Seven degrees end to end — enough
+           that they answer the cursor, not so much that the assembly swings
+           and gives away that the tilt is painted on. */
+        roll: (nx - 0.5) * LIGHT.roll * 2,
+      }
+      if (!frame) frame = requestAnimationFrame(write)
+    }
+
+    const onLeave = () => {
+      next = { lx: LIGHT.rest[0], ly: LIGHT.rest[1], dx: 0, dy: 0, roll: 0 }
+      if (!frame) frame = requestAnimationFrame(write)
+    }
+
+    host.addEventListener('pointermove', onMove)
+    host.addEventListener('pointerleave', onLeave)
+    return () => {
+      host.removeEventListener('pointermove', onMove)
+      host.removeEventListener('pointerleave', onLeave)
+      if (frame) cancelAnimationFrame(frame)
+    }
+  }, [])
+
+  return (
+    <div className="rl-core" ref={ref}>
+      {/* Three banks on coprime periods so the drift never resolves into a
+          loop you can watch, and one of them passes in front of the sphere —
+          fog you are only ever behind is just a glow. */}
+      <div className="rl-fog" aria-hidden="true">
+        <i data-bank="0" />
+        <i data-bank="1" />
+        <i data-bank="2" />
+      </div>
+
+      {/* The far halves, then the mark, then the near halves. The stack IS the
+          depth — there is no 3D here, only three layers in the right order. */}
+      <Orbits layer="back" />
+
+      <div className="rl-sphere" aria-hidden="true">
+        <span className="rl-sphere__spec" />
+      </div>
+
+      <Orbits layer="front" />
+      <i className="rl-fog__front" aria-hidden="true" />
+    </div>
+  )
+}
+
 function Meter({ score }) {
   return (
     <div className="rl-meter" aria-hidden="true">
@@ -212,6 +388,176 @@ function Meter({ score }) {
     </div>
   )
 }
+
+/* ---- the three facts, drawn ---- *
+ *
+ * A page whose whole argument is "show the measurement" cannot state its own
+ * three numbers in a bare table. Each is drawn as the thing it counts, in the
+ * page's own vocabulary — hairlines, one hue, mono for measurements. These are
+ * instruments, not decoration: every value in them is a real property of the
+ * product, and each is pulled from the same constant the rest of the page uses.
+ */
+
+/* Even steps of the one accent family, not four different hues: the arcs are
+   equal in length because the four criteria are equal in weight, and a tonal
+   step reads as a sweep turning rather than as a ranking. Hover turns the ring
+   by exactly one criterion. */
+const ARC_TONES = [
+  'var(--emerald-100)',
+  'var(--emerald-300)',
+  'var(--emerald-500)',
+  'var(--emerald-600)',
+]
+
+/* Four EQUAL arcs. The hero's core ring is the weighted one; a scored mode's
+   four criteria carry the same weight as each other, so this one must not
+   borrow that ring's uneven sweep. */
+function FigRubric() {
+  const R = 34
+  const CIRC = 2 * Math.PI * R
+  const SEG = CIRC / 4
+  const GAP = 9
+
+  return (
+    <svg className="rl-fig" viewBox="0 0 176 108" aria-hidden="true" focusable="false">
+      {/* two groups, not one: the entrance animation owns the outer transform
+          and the hover turn owns the inner one, because an animation and a
+          transition fighting over the same property is a stuck ring */}
+      <g className="rl-fig__boot">
+        <g className="rl-fig__ring">
+          <circle className="rl-fig__track" cx="88" cy="52" r={R} />
+          {ARC_TONES.map((tone, i) => (
+            <g key={tone} className="rl-fig__arc" style={{ '--i': i, '--arc': tone }}>
+              <circle
+                cx="88"
+                cy="52"
+                r={R}
+                strokeDasharray={`${SEG - GAP} ${CIRC - SEG + GAP}`}
+                strokeDashoffset={-i * SEG}
+              />
+            </g>
+          ))}
+        </g>
+      </g>
+      <circle className="rl-fig__core" cx="88" cy="52" r="4" />
+    </svg>
+  )
+}
+
+/* The band a score falls in, on the page's one published tone scale. The same
+   two thresholds every other number on this page is coloured by — the scorecard
+   values, the meters, the trend bars — so the ruler cannot show a scale the rest
+   of the page disagrees with. */
+const bandOf = (n) => (n >= 70 ? 'high' : n >= 45 ? 'mid' : 'low')
+
+/* The scale drawn as a banded ruler rather than one accent line. 0–100 is not a
+   neutral span: it is three bands with a threshold in it, and colouring it that
+   way is the difference between showing a range and showing what the range
+   means. STRONG is where the scoring prompt itself starts calling an answer
+   good, and it is the same line the trend chart below is measured against. */
+const SCALE_BANDS = [
+  { from: 0, to: 45 },
+  { from: 45, to: 70 },
+  { from: 70, to: 100 },
+]
+
+function FigScale() {
+  const X0 = 18
+  const X1 = 158
+  const at = (n) => X0 + ((X1 - X0) * n) / 100
+  const ticks = Array.from({ length: 11 }, (_, i) => i * 10)
+
+  return (
+    <svg className="rl-fig" viewBox="0 0 176 108" aria-hidden="true" focusable="false">
+      {ticks.map((n, i) => (
+        <line
+          key={n}
+          className="rl-fig__tick"
+          data-band={bandOf(n)}
+          style={{ '--i': i }}
+          x1={at(n)}
+          y1="62"
+          x2={at(n)}
+          y2={n % 50 === 0 ? 74 : 68}
+        />
+      ))}
+      <line className="rl-fig__axis" x1={X0} y1="62" x2={X1} y2="62" />
+      {SCALE_BANDS.map((b, i) => (
+        <line
+          key={b.from}
+          className="rl-fig__sweep"
+          data-band={bandOf(b.from)}
+          style={{ '--i': i }}
+          pathLength="1"
+          x1={at(b.from)}
+          y1="62"
+          x2={at(b.to)}
+          y2="62"
+        />
+      ))}
+
+      <line className="rl-fig__mark" x1={at(STRONG)} y1="36" x2={at(STRONG)} y2="62" />
+      <circle className="rl-fig__markdot" cx={at(STRONG)} cy="62" r="3" />
+      <text className="rl-fig__hot" x={at(STRONG)} y="28" textAnchor="middle">
+        {STRONG} strong
+      </text>
+    </svg>
+  )
+}
+
+/* The four bays with one of them bracketed — the same brackets that are this
+   page's entire control vocabulary, closing on the single mode a conversation
+   is held to. Addresses come from BAYS so the figure cannot drift from the
+   section under it. */
+function FigLane() {
+  const TILE = 30
+  const GAP = 12
+  const x = (i) => 10 + i * (TILE + GAP)
+  const ON = 1 // Coach — the bay that leads the section below, for the same reason
+
+  return (
+    <svg className="rl-fig" viewBox="0 0 176 108" aria-hidden="true" focusable="false">
+      {BAYS.map((b, i) => (
+        <g
+          key={b.address}
+          className={`rl-fig__slot${i === ON ? ' is-on' : ''}`}
+          /* the two bays that carry a rubric read in the accent, the two that
+             do not stay neutral — the same distinction the list below makes */
+          data-scored={b.criteria ? '' : undefined}
+          style={{ '--i': i }}
+        >
+          <rect x={x(i)} y="32" width={TILE} height={TILE} rx="7" />
+          <text x={x(i) + TILE / 2} y="84" textAnchor="middle">
+            {b.address}
+          </text>
+        </g>
+      ))}
+      {/* wrapped for the same reason the ring is: the entrance closes the
+          brackets inward, the hover nudges them back out, and they cannot both
+          own the transform of one element. --from is set on the wrapper and
+          inherited, so one value drives both directions. */}
+      <g className="rl-fig__brkwrap" style={{ '--from': '-9px' }}>
+        <path
+          className="rl-fig__brk"
+          d={`M ${x(ON) - 3} 26 L ${x(ON) - 8} 26 L ${x(ON) - 8} 68 L ${x(ON) - 3} 68`}
+        />
+      </g>
+      <g className="rl-fig__brkwrap" style={{ '--from': '9px' }}>
+        <path
+          className="rl-fig__brk"
+          d={`M ${x(ON) + TILE + 3} 26 L ${x(ON) + TILE + 8} 26 L ${x(ON) + TILE + 8} 68 L ${x(ON) + TILE + 3} 68`}
+        />
+      </g>
+      <circle className="rl-fig__core" cx={x(ON) + TILE / 2} cy="47" r="4.5" />
+    </svg>
+  )
+}
+
+const FACTS = [
+  { value: '4', label: 'Rubric criteria per scored mode', Fig: FigRubric },
+  { value: '0–100', label: 'Scale, everywhere', Fig: FigScale },
+  { value: '1', label: 'Modes per conversation', Fig: FigLane },
+]
 
 export default function Landing() {
   const pageRef = useReveal()
@@ -259,15 +605,7 @@ export default function Landing() {
               not a personality.
             </p>
 
-            {/* The core. Built, not illustrated: the ring is a real conic sweep
-                of the four rubric weights and the orb is the app's own mark. */}
-            <div className="rl-core">
-              <div className="rl-core__glow" aria-hidden="true" />
-              <div className="rl-core__tile">
-                <span className="rl-core__ring" aria-hidden="true" />
-                <span className="rl-orb rl-core__orb" aria-hidden="true" />
-              </div>
-            </div>
+            <Core />
 
             <p className="rl-flank rl-flank--r">
               Every turn scored
@@ -312,21 +650,24 @@ export default function Landing() {
             composes what you read — so the shape of a turn is the same every time even though
             the words never are.
           </p>
-          <dl className="rl-facts">
-            <div>
-              <dt>Rubric criteria per scored mode</dt>
-              <dd>4</dd>
-            </div>
-            <div>
-              <dt>Scale, everywhere</dt>
-              <dd>0–100</dd>
-            </div>
-            <div>
-              <dt>Modes per conversation</dt>
-              <dd>1</dd>
-            </div>
-          </dl>
         </div>
+
+        {/* Out of the prose column and across the full width: these are the
+            section's evidence, not a footnote to its last paragraph. */}
+        <dl className="rl-facts" data-reveal>
+          {FACTS.map(({ value, label, Fig }) => (
+            <div className="rl-fact" key={label}>
+              <div className="rl-fact__fig">
+                <Fig />
+              </div>
+              {/* dt before dd is the only order a definition list allows; the
+                  cell reorders them so the drawn value leads and the label
+                  captions it. */}
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
 
       {/* ============================ BAYS ============================ */}

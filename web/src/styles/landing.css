@@ -17,7 +17,8 @@
   overflow-x: hidden;
   position: relative;
   background: var(--black-canvas);
-  /* the frame's own inset is the page's gutter, so nothing else needs padding */
+  /* The closing frame's inset. The opening view is full bleed and supplies its
+     own gutters, so this no longer stands in as the page's. */
   --frame-inset: 20px;
   --rule: 1px solid var(--border-faint);
   --cy-line: rgba(92, 200, 232, 0.22);
@@ -153,13 +154,20 @@
   text-transform: uppercase;
 }
 
+/* Weight, not size or case — the scale and the caps are what make this a display
+   line, and 700 was what made it shout. Three changes that go together:
+   500 because light-on-dark halates and reads about a step heavier than the
+   number says, so at 88px this still lands as display rather than as body;
+   tracking almost back to normal because heavy caps need pulling together and
+   lighter ones fall apart when you do it; and line-height off the sub-1.0 clamp
+   that only made sense for a solid wall of 700. */
 .rl-display {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: 600;
   font-size: clamp(2.1rem, 7.4vw, 5.5rem);
-  line-height: 0.97;
-  letter-spacing: -0.035em;
+  line-height: 1.02;
+  letter-spacing: -0.012em;
   text-transform: uppercase;
   text-wrap: balance;
   color: var(--text-primary);
@@ -265,13 +273,24 @@
   );
 }
 
-/* dvh, not vh: on phones 100vh is the retracted-URL-bar height, which pushed the
-   primary action below the real fold on first load — and the contract names that
-   action as part of the first viewport. The vh fallback is for browsers without
-   dvh, where the two are equivalent anyway. */
+/* The opening view is not a pane held up in front of the light — it is the
+   light. Every part of .rl-frame that says "this is an object on a page" comes
+   off here: the stroke, the radius, the inset, the drop shadow and the top
+   highlight. What is left is the vertical wash and the dotted field, both now
+   running the full width of the screen, so the visitor arrives *in* the system
+   rather than looking at a screenshot of it. The closing frame keeps its
+   chrome — it is a card at the end of a scroll, not an arrival.
+   dvh, not vh: on phones 100vh is the retracted-URL-bar height, which pushed
+   the primary action below the real fold on first load — and the contract names
+   that action as part of the first viewport. The vh fallback is for browsers
+   without dvh, where the two are equivalent anyway. */
 .rl-boot {
-  min-height: calc(100vh - var(--frame-inset) * 2);
-  min-height: calc(100dvh - var(--frame-inset) * 2);
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
 }
@@ -279,15 +298,17 @@
 /* ---- the boot sequence ---- */
 
 /* FORM is "the surface as a system coming online", and until this existed that
-   was an assertion the page never performed: the opening frame shared the same
+   was an assertion the page never performed: the opening view shared the same
    generic fade as every section below it. This is the one authored moment —
-   struck border, rail, type, then the core — and it belongs to the boot frame
-   alone. Everything animates from a state that is already laid out, so nothing
-   here can leave the page blank if it never runs. */
-@keyframes rl-strike {
+   field, rail, type, then the core — and it belongs to the boot view alone.
+   Everything animates from a state that is already laid out, so nothing here
+   can leave the page blank if it never runs.
+   The first beat used to be a struck border. With the frame gone there is no
+   stroke to strike, so the field itself comes up instead — which is the truer
+   reading of the sequence anyway: the surface arrives before its contents. */
+@keyframes rl-field-in {
   from {
-    border-color: rgba(92, 200, 232, 0);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0), 0 40px 120px rgba(0, 0, 0, 0);
+    opacity: 0;
   }
 }
 
@@ -316,8 +337,8 @@
   }
 }
 
-.rl-boot {
-  animation: rl-strike 900ms var(--ease-emphasized) both;
+.rl-boot .rl-field {
+  animation: rl-field-in 900ms var(--ease-emphasized) both;
 }
 
 /* The rail resolves left-to-right, like a readout filling in. */
@@ -342,19 +363,15 @@
   animation: rl-boot-in 700ms var(--ease-emphasized) 900ms both;
 }
 
-/* The ghost stroke outside the frame, echoing it. One repeat only — a stack of
-   them would be a decoration rather than a device. */
-.rl-boot::before {
-  content: '';
-  position: absolute;
-  inset: -12px;
-  border: 1px solid rgba(92, 200, 232, 0.09);
-  border-radius: 38px;
-  pointer-events: none;
-}
+/* ---- the top rail ---- *
+ *
+ * The ghost stroke that used to sit outside the frame went with the frame: an
+ * echo of a stroke that no longer exists is just a line. */
 
-/* ---- the top rail ---- */
-
+/* Its own gutter now, since the frame's 20px inset is no longer supplying one.
+   Wider than the 24px the sections below use — the rail runs the full width of
+   the screen, and content pinned to the edge of a full-bleed surface reads as
+   an accident rather than as a margin. */
 .rl-rail {
   position: relative;
   z-index: 2;
@@ -362,7 +379,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 18px 24px;
+  padding: 20px clamp(20px, 2.8vw, 44px);
   border-bottom: 1px solid rgba(92, 200, 232, 0.12);
 }
 
@@ -436,63 +453,263 @@
   text-align: left;
 }
 
-/* ---- the core object ---- */
-
+/* ---- the core object: a lit sphere in fog ---- *
+ *
+ * The mark at scale. Everything below is one light source and the consequences
+ * of it: --lx/--ly are where that light is, written by the pointer handler in
+ * Landing.jsx, and the body gradient, the terminator, the rim and the specular
+ * all read from the same pair. Move the light and the whole object re-lights
+ * coherently, which is the only way a CSS sphere avoids looking like a sticker
+ * of a sphere.
+ */
 .rl-core {
   position: relative;
   display: grid;
   place-items: center;
-  width: clamp(132px, 21vw, 196px);
-  aspect-ratio: 5 / 6;
+  width: clamp(164px, 26vw, 252px);
+  aspect-ratio: 1;
+  /* Where the light is, in the sphere's own coordinates. The resting pair is
+     the brand orb's own highlight, so the big sphere and the 22px mark in the
+     rail are lit from the same place. */
+  --lx: 35%;
+  --ly: 30%;
+  --dx: 0px;
+  --dy: 0px;
 }
 
-.rl-core__glow {
-  position: absolute;
-  inset: -46%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(92, 200, 232, 0.5) 0%, transparent 66%);
-  filter: blur(18px);
-}
-
-.rl-core__tile {
+.rl-sphere {
   position: relative;
-  display: grid;
-  place-items: center;
+  z-index: 2;
+  width: 78%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    /* The body. Four stops, not two: the jump from the lit cap to the limb is
+       where roundness is either sold or lost, and #14526a at the edge is what
+       stops the sphere ending in a flat cyan disc. */
+    radial-gradient(
+      circle at var(--lx) var(--ly),
+      #eafaff 0%,
+      #bfeaf7 14%,
+      #8dd9ed 32%,
+      #5cc8e8 54%,
+      #2b8caa 78%,
+      #14526a 100%
+    );
+  box-shadow:
+    /* terminator, opposite the light */
+    inset -14px -18px 42px rgba(4, 26, 34, 0.55),
+    /* rim light on the dark limb — the bounce that separates the sphere from
+       the background it is sitting in */ inset -2px -3px 10px rgba(141, 217, 237, 0.4),
+    /* The light it throws back into the fog. Wide and weak rather than tight
+       and strong: a hard halo at the limb burns out the first 40px around the
+       sphere, which is exactly the band the fog needs to be legible in. */
+    0 0 110px rgba(92, 200, 232, 0.26),
+    0 28px 64px rgba(0, 0, 0, 0.55);
+  transform: translate(calc(var(--dx) * -0.35), calc(var(--dy) * -0.35));
+  transition: transform 620ms var(--ease-emphasized);
+}
+
+/* Small, tight and near-white: the one hard highlight on an object made
+   entirely of soft gradients, and the thing the eye actually reads as "wet". */
+.rl-sphere__spec {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at calc(var(--lx) - 4%) calc(var(--ly) - 4%),
+    rgba(255, 255, 255, 0.92) 0%,
+    rgba(255, 255, 255, 0.32) 5%,
+    transparent 13%
+  );
+}
+
+/* ---- the fog ---- */
+
+.rl-fog,
+.rl-fog__front {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Reaching well past the sphere. Fog that stops at the object's edge is a
+   rim light; this has to occupy the room around it. */
+.rl-fog {
+  inset: -125%;
+  z-index: 0;
+}
+
+.rl-fog i {
+  position: absolute;
+  border-radius: 50%;
+  /* Not circles. A perfect disc of blur reads as a glow however soft it is;
+     fog needs an axis, so each bank is a flattened ellipse turned to its own
+     angle and the overlaps are what make the shape look weathered. */
+  background: radial-gradient(
+    58% 34% at 50% 50%,
+    rgba(141, 217, 237, 0.3) 0%,
+    rgba(61, 175, 209, 0.17) 40%,
+    rgba(20, 82, 106, 0.07) 62%,
+    transparent 78%
+  );
+  filter: blur(30px);
+  will-change: transform;
+}
+
+.rl-fog i[data-bank='0'] {
+  inset: 30% 12% 32% 16%;
+  animation: rl-fog-a 17s var(--ease-standard) infinite alternate;
+}
+
+.rl-fog i[data-bank='1'] {
+  inset: 34% 20% 26% 8%;
+  opacity: 0.8;
+  filter: blur(40px);
+  animation: rl-fog-b 23s var(--ease-standard) infinite alternate;
+}
+
+.rl-fog i[data-bank='2'] {
+  inset: 22% 24% 36% 22%;
+  opacity: 0.62;
+  filter: blur(52px);
+  animation: rl-fog-c 31s var(--ease-standard) infinite alternate;
+}
+
+/* The one bank in front. Very low, and screen so it lifts the sphere's own
+   colour rather than greying it — fog you are only ever behind is a glow. */
+.rl-fog__front {
+  inset: -44%;
+  z-index: 4;
+  border-radius: 50%;
+  background: radial-gradient(
+    54% 32% at 42% 58%,
+    rgba(199, 236, 247, 0.26) 0%,
+    rgba(92, 200, 232, 0.12) 44%,
+    transparent 72%
+  );
+  filter: blur(24px);
+  mix-blend-mode: screen;
+  transform: translate(var(--dx), var(--dy));
+  transition: transform 900ms var(--ease-emphasized);
+  will-change: transform;
+}
+
+/* The banks drift against the light, which is what stops the object reading as
+   one flat sticker when the pointer moves. */
+.rl-fog {
+  transform: translate(var(--dx), var(--dy));
+  transition: transform 900ms var(--ease-emphasized);
+}
+
+/* Each bank starts at its own angle and turns a few degrees over its period.
+   The rotation is what keeps the overlap between banks changing shape — three
+   ellipses that only slide past each other stay recognisably three ellipses. */
+@keyframes rl-fog-a {
+  from {
+    transform: rotate(-14deg) scale(1);
+  }
+  to {
+    transform: rotate(6deg) translate3d(6%, -4%, 0) scale(1.14);
+  }
+}
+
+@keyframes rl-fog-b {
+  from {
+    transform: rotate(34deg) scale(1.04);
+  }
+  to {
+    transform: rotate(18deg) translate3d(-7%, 5%, 0) scale(1.2);
+  }
+}
+
+@keyframes rl-fog-c {
+  from {
+    transform: rotate(76deg) scale(1.1);
+  }
+  to {
+    transform: rotate(96deg) translate3d(4%, 7%, 0) scale(0.94);
+  }
+}
+
+/* ---- the orbits ---- *
+ *
+ * Two identical layers, one either side of the sphere in the stack. Each ring
+ * is drawn as two halves and only ever renders the half belonging to its layer,
+ * so the ring goes behind the mark and comes back out — the depth is the stack
+ * order, not a 3D transform, which means it cannot break on a browser that
+ * flattens preserve-3d.
+ */
+.rl-orbits {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  border-radius: 30%;
-  background: linear-gradient(165deg, #8dd9ed 0%, #5cc8e8 42%, #2b8caa 100%);
-  box-shadow: inset 0 2px 10px rgba(255, 255, 255, 0.45), inset 0 -12px 26px rgba(4, 32, 42, 0.5),
-    0 26px 60px rgba(92, 200, 232, 0.3);
+  overflow: visible;
+  pointer-events: none;
+  /* The whole assembly turns with the pointer, both layers by the same amount
+     so front and back halves never come apart at the seam. */
+  transform: rotate(var(--roll, 0deg));
+  transition: transform 700ms var(--ease-emphasized);
 }
 
-/* Four arcs on one ring: the four rubrics, drawn rather than illustrated. */
-.rl-core__ring {
-  position: absolute;
-  inset: 13%;
-  border-radius: 50%;
-  background: conic-gradient(
-    from -45deg,
-    rgba(6, 32, 40, 0.55) 0deg 76deg,
-    transparent 76deg 90deg,
-    rgba(6, 32, 40, 0.55) 90deg 166deg,
-    transparent 166deg 180deg,
-    rgba(6, 32, 40, 0.55) 180deg 256deg,
-    transparent 256deg 270deg,
-    rgba(6, 32, 40, 0.55) 270deg 346deg,
-    transparent 346deg 360deg
-  );
-  mask: radial-gradient(circle, transparent 58%, #000 60%, #000 72%, transparent 74%);
-  -webkit-mask: radial-gradient(circle, transparent 58%, #000 60%, #000 72%, transparent 74%);
+.rl-orbits--back {
+  z-index: 1;
 }
 
-.rl-core__orb {
-  width: 34%;
-  height: auto;
-  aspect-ratio: 1;
-  background: radial-gradient(circle at 34% 28%, #ffffff 0%, #eafaff 38%, #a5e2f4 100%);
-  box-shadow: 0 0 26px rgba(255, 255, 255, 0.6);
+.rl-orbits--front {
+  z-index: 3;
 }
+
+.rl-orbit {
+  fill: none;
+  stroke: var(--emerald-300);
+  stroke-width: var(--w);
+  stroke-linecap: round;
+  opacity: 0.5;
+}
+
+/* The near halves read brighter and carry the bloom. Two reasons, and they are
+   the same reason: the far half is behind a lit sphere in fog, and a ring that
+   is equally bright all the way round is a flat hoop.
+   Near-white rather than the accent, and two shadows rather than one: the front
+   half has to cross a bright cyan sphere AND a near-black field in a single
+   unbroken line. In the accent at accent value it disappeared against the
+   sphere entirely. The dark shadow is what holds it on the lit side; the cyan
+   bloom is what holds it on the dark side. */
+.rl-orbits--front .rl-orbit {
+  stroke: var(--emerald-50);
+  opacity: 0.9;
+  filter: drop-shadow(0 0 2px rgba(3, 24, 32, 0.9))
+    drop-shadow(0 0 8px rgba(92, 200, 232, 0.5));
+}
+
+.rl-orbits--back .rl-orbit {
+  opacity: 0.34;
+}
+
+/* The field-line effect: the dash pattern travels along the ring rather than a
+   bead running round a track. It reads as the line being energised, which is
+   what a field line does and what a satellite does not.
+   The offset lands on exactly one pattern length, so the loop is seamless — any
+   other value ticks visibly once per iteration. */
+.rl-orbit--flow {
+  stroke-dasharray: 2 9;
+  animation: rl-orbit-flow var(--dur) linear infinite;
+}
+
+@keyframes rl-orbit-flow {
+  to {
+    stroke-dashoffset: calc(var(--dir) * 11px);
+  }
+}
+
+/* The tile this replaced carried four arcs on a ring — the four rubric weights.
+   They are not here. An orbit close enough to the sphere to read as belonging
+   to it lands on the limb, where four faint arcs following the curve look like
+   scratches on the glass rather than like a measurement; far enough out to be
+   unambiguous, it competes with the fog for the same space. The claim survives
+   on the page regardless: the "4" figure in Who we are is that same ring, drawn
+   where it has room to be read. */
 
 .rl-boot__act {
   display: flex;
@@ -564,33 +781,286 @@
   gap: clamp(32px, 6vw, 88px);
 }
 
+/* The three numbers were a three-row table — label left, figure right, rule
+   between — which asked the reader to take "4", "0–100" and "1" on trust on the
+   one page whose entire argument is that a measurement should show itself. Each
+   is now drawn as the thing it counts. Same vocabulary as everything else here:
+   hairlines, one hue, mono only on measurements, no card. */
 .rl-facts {
-  margin: 40px 0 0;
+  grid-column: 1 / -1;
+  margin: 0;
   display: grid;
-  gap: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   border-top: var(--rule);
 }
 
-.rl-facts > div {
+.rl-fact {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 14px 0;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 30px clamp(18px, 3vw, 36px) 26px;
   border-bottom: var(--rule);
+  border-left: var(--rule);
+}
+
+/* The first cell keeps the section's own left edge; a gutter there would read
+   as an indent rather than as a column. */
+.rl-fact:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.rl-fact__fig {
+  order: 0;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.rl-facts dd {
+  order: 1;
+  margin: 0;
+  color: var(--emerald-300);
+  font: 500 26px/1 var(--font-mono);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
 }
 
 .rl-facts dt {
+  order: 2;
+  margin-top: 9px;
   color: var(--text-secondary);
   font: var(--text-body-sm);
 }
 
-.rl-facts dd {
-  margin: 0;
-  color: var(--emerald-300);
-  font: 500 20px/1 var(--font-mono);
-  letter-spacing: -0.01em;
-  font-variant-numeric: tabular-nums;
+/* ---- the drawn facts ---- */
+
+.rl-fig {
+  display: block;
+  width: 100%;
+  max-width: 196px;
+  height: auto;
+}
+
+.rl-fig text {
+  fill: var(--rl-quiet);
+  font: 400 8.5px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.rl-fig__hot {
+  fill: var(--emerald-300);
+}
+
+/* the four criteria: one ring, four equal arcs */
+
+.rl-fig__boot,
+.rl-fig__ring {
+  transform-box: view-box;
+  transform-origin: 88px 52px;
+}
+
+/* Hover turns the ring by a quarter — one criterion. The transition lives here
+   and the entrance animation lives on .rl-fig__boot above it, because a running
+   animation with fill-mode both outranks a transition on the same property and
+   the ring would simply refuse to turn. */
+.rl-fig__ring {
+  transform: rotate(-90deg);
+  transition: transform 620ms var(--ease-emphasized);
+}
+
+.rl-fact:hover .rl-fig__ring {
+  transform: rotate(0deg);
+}
+
+.rl-fig__track {
+  fill: none;
+  stroke: var(--border-faint);
+  stroke-width: 6;
+}
+
+.rl-fig__arc {
+  fill: none;
+  stroke: var(--arc);
+  stroke-width: 6;
+  /* Held back from full strength so the four arcs read as one instrument rather
+     than four alerts — but not below this, or the ring goes grey beside the
+     ruler and the brackets and the three cells stop looking like one row. */
+  opacity: 0.82;
+  transition: opacity var(--duration-base) var(--ease-standard);
+  transition-delay: calc(var(--i) * 70ms);
+}
+
+.rl-fig__core {
+  fill: var(--emerald-300);
+}
+
+/* the scale: a ruler marked where the rubric starts calling an answer strong */
+
+.rl-fig__axis {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+/* Ticks and segments both take their colour from the page's published tone
+   scale via [data-band], so this ruler is coloured by the same rule as every
+   score, meter and bar on the page rather than by a palette of its own. */
+.rl-fig__tick {
+  stroke: var(--band-fill);
+  stroke-width: 1;
+  opacity: 0.42;
+  transition: opacity var(--duration-base) var(--ease-standard);
+  transition-delay: calc(var(--i) * 26ms);
+}
+
+.rl-fig__sweep {
+  stroke: var(--band-fill);
+  stroke-width: 2.5;
+  /* butt, not round: rounded caps on abutting segments overlap into a bulge at
+     each band boundary, which is exactly where the eye is meant to read a
+     clean handover from one band to the next. */
+  stroke-linecap: butt;
+}
+
+.rl-fig__mark {
+  stroke: var(--emerald-300);
+  stroke-width: 1;
+}
+
+.rl-fig__markdot {
+  fill: var(--emerald-300);
+}
+
+/* the four bays with one bracketed */
+
+.rl-fig__slot rect {
+  fill: none;
+  stroke: var(--border-soft);
+  stroke-width: 1;
+  transition: fill var(--duration-base) var(--ease-standard);
+}
+
+.rl-fig__slot.is-on rect {
+  fill: var(--cy-line);
+  stroke: var(--emerald-500);
+}
+
+/* The two bays that carry a rubric read in the accent even when they are not
+   the bracketed one — the row is about which mode you are held to, and half of
+   the four are not held to a score at all. */
+.rl-fig__slot[data-scored] text {
+  fill: var(--emerald-600);
+}
+
+.rl-fig__slot.is-on text {
+  fill: var(--emerald-300);
+}
+
+.rl-fig__slot:not(.is-on) {
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+/* The bracket is this page's only control shape. Here it is doing what it says:
+   closing on the single mode the conversation is held to. */
+.rl-fig__brk {
+  fill: none;
+  stroke: var(--emerald-500);
+  stroke-width: 1.25;
+}
+
+/* Explicit rather than relying on the SVG default, so a px translate on these
+   two resolves against the viewBox and not against a bounding box that changes
+   with the path. */
+.rl-fig__brk,
+.rl-fig__brkwrap {
+  transform-box: view-box;
+  transform-origin: center;
+}
+
+/* One authored moment per instrument, on reveal rather than on mount: the ring
+   settles into place, the scale draws itself, the brackets close. */
+.rl-facts:not(.is-waiting) .rl-fig__boot {
+  animation: rl-fig-ring 720ms var(--ease-emphasized) both;
+}
+
+/* Band by band, low to high — the ruler builds the way a score climbs it. */
+.rl-facts:not(.is-waiting) .rl-fig__sweep {
+  animation: rl-fig-draw 380ms var(--ease-emphasized) both;
+  animation-delay: calc(var(--i) * 200ms);
+}
+
+.rl-facts:not(.is-waiting) .rl-fig__mark,
+.rl-facts:not(.is-waiting) .rl-fig__markdot,
+.rl-facts:not(.is-waiting) .rl-fig__hot,
+.rl-facts:not(.is-waiting) .rl-fig__core {
+  animation: rl-fig-in 420ms var(--ease-standard) 600ms both;
+}
+
+.rl-facts:not(.is-waiting) .rl-fig__slot {
+  animation: rl-fig-in 420ms var(--ease-standard) both;
+  animation-delay: calc(var(--i) * 90ms);
+}
+
+.rl-facts:not(.is-waiting) .rl-fig__brkwrap {
+  animation: rl-fig-brk 560ms var(--ease-emphasized) 420ms both;
+}
+
+/* Relative to .rl-fig__ring's own -90deg, so the ring arrives through a
+   half-turn and settles where the base transform puts it. */
+@keyframes rl-fig-ring {
+  from {
+    transform: rotate(-52deg) scale(0.86);
+  }
+}
+
+@keyframes rl-fig-draw {
+  from {
+    stroke-dasharray: 0 1;
+  }
+  to {
+    stroke-dasharray: 1 0;
+  }
+}
+
+@keyframes rl-fig-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rl-fig-brk {
+  from {
+    opacity: 0;
+    transform: translateX(var(--from));
+  }
+}
+
+/* Hover is the only interaction: nothing here is a control, so the response is
+   the instrument reading brighter, never anything that offers a destination. */
+.rl-fact:hover .rl-fig__arc {
+  opacity: 1;
+}
+
+.rl-fact:hover .rl-fig__tick {
+  opacity: 1;
+}
+
+.rl-fact:hover .rl-fig__slot:not(.is-on) {
+  opacity: 0.4;
+}
+
+.rl-fact:hover .rl-fig__slot.is-on rect {
+  fill: var(--emerald-glow);
+}
+
+/* Outward on hover by the same 3px as the page's own bracketed controls — the
+   shape is borrowed, so the behaviour has to be borrowed with it. */
+.rl-fig__brk {
+  transition: transform var(--duration-base) var(--ease-emphasized);
+}
+
+.rl-fact:hover .rl-fig__brk {
+  transform: translateX(calc(var(--from) * 0.34));
 }
 
 /* ---- bays ---- */
@@ -1230,18 +1700,17 @@
     --frame-inset: 10px;
   }
 
-  .rl-frame {
+  /* :not(.rl-boot) — the opening view is full bleed at every width, and this
+     rule sits after it in the cascade, so an unqualified .rl-frame would hand
+     the hero a corner radius back on phones. */
+  .rl-frame:not(.rl-boot) {
     border-radius: 18px;
-  }
-
-  .rl-boot::before {
-    display: none;
   }
 
   /* The rail loses its middle readout before it wraps: three items at 360px
      would each get a third of the width and the brand would break in half. */
   .rl-rail {
-    padding: 14px 14px;
+    padding: 14px 16px;
   }
 
   .rl-rail__status {
@@ -1288,6 +1757,21 @@
   .rl-card {
     padding: 18px 16px 20px;
   }
+
+  /* Three instruments side by side stop being readable well before the text
+     does — the ruler's ticks merge and the bay addresses collide. */
+  .rl-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rl-fact {
+    padding: 26px 0;
+    border-left: 0;
+  }
+
+  .rl-fig {
+    max-width: 172px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1295,14 +1779,48 @@
   .rl-detail,
   .rl-meter i,
   .rl-col i,
-  .rl-boot,
+  .rl-boot .rl-field,
   .rl-rail,
   .rl-boot .rl-display,
   .rl-core,
+  .rl-fog i,
+  .rl-orbit--flow,
   .rl-flank--l,
   .rl-flank--r,
   .rl-boot__act {
     animation: none;
+  }
+
+  /* The pointer handler bails out under this query, so --dx/--dy never leave
+     0 — but the transitions that would have carried them come off too. */
+  .rl-sphere,
+  .rl-fog,
+  .rl-fog__front,
+  .rl-orbits {
+    transition: none;
+  }
+
+  /* Matched selector, not a bare class: the instruments' animations are hung off
+     `.rl-facts:not(.is-waiting)`, which outranks a lone `.rl-fig__ring` — and
+     under reduced motion the observer never runs, so that state is always on. */
+  .rl-facts:not(.is-waiting) .rl-fig__boot,
+  .rl-facts:not(.is-waiting) .rl-fig__sweep,
+  .rl-facts:not(.is-waiting) .rl-fig__brkwrap,
+  .rl-facts:not(.is-waiting) .rl-fig__mark,
+  .rl-facts:not(.is-waiting) .rl-fig__markdot,
+  .rl-facts:not(.is-waiting) .rl-fig__hot,
+  .rl-facts:not(.is-waiting) .rl-fig__core,
+  .rl-facts:not(.is-waiting) .rl-fig__slot {
+    animation: none;
+  }
+
+  /* The colour parts of the hover survive; the two that move do not. */
+  .rl-fact:hover .rl-fig__ring {
+    transform: rotate(-90deg);
+  }
+
+  .rl-fact:hover .rl-fig__brk {
+    transform: none;
   }
 
   [data-reveal] {
