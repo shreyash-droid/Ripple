@@ -141,7 +141,7 @@ export default function Sidebar({
             className="h2c-railbtn h2c-rail__home"
             onClick={onHome}
             aria-label="Ripple home"
-            title="Home"
+            title="Ripple home"
           >
             <span className="h2c-orb" />
           </button>
@@ -198,7 +198,12 @@ export default function Sidebar({
   return (
     <aside className="h2c-sidebar">
       <div className="h2c-sidebar__head">
-        <button type="button" className="h2c-brand h2c-brand--home" onClick={onHome} title="Home">
+        <button
+          type="button"
+          className="h2c-brand h2c-brand--home"
+          onClick={onHome}
+          title="Ripple home"
+        >
           <span className="h2c-orb" />
           <span className="h2c-brand__name">Ripple</span>
         </button>

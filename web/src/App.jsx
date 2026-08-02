@@ -41,7 +41,8 @@ const isDrawerWidth = () => window.matchMedia(DRAWER_QUERY).matches
 /* Hash route, so a conversation survives a reload and the back button works.
    Deliberately not react-router: the hero and the chat are one continuous
    stage driven by --p, and splitting them across routes would unmount the very
-   thing the transition animates. `entered` is what makes chat a "page". */
+   thing the transition animates. `entered` is what makes chat a "page", and
+   anything that is not #/c — #/try included — leaves the stage at progress 0. */
 function readRoute() {
   const m = /^#\/c(?:\/(\d+))?$/.exec(window.location.hash)
   if (!m) return { entered: false, conversationId: null }
@@ -53,10 +54,6 @@ function writeRoute(conversationId, replace = false) {
   if (window.location.hash === hash) return
   const url = `${window.location.pathname}${window.location.search}${hash}`
   window.history[replace ? 'replaceState' : 'pushState'](null, '', url)
-}
-
-function clearRoute() {
-  window.history.pushState(null, '', window.location.pathname + window.location.search)
 }
 
 /* Sends the visitor to the sign-in route, keeping the message they composed.
@@ -246,16 +243,17 @@ export default function App() {
 
   useEffect(() => () => uploadAbortRef.current?.abort(), [])
 
-  // The sidebar logo is the only way back to the landing page.
+  /* The wordmark goes home, and home is the front page — the same destination
+     the mark has in the top rail and on the front page's own rail, because a
+     logo that means three different things depending on which surface you are
+     standing on is not a logo.
+   *
+   * It leaves App entirely, so nothing here resets the stage: assigning the
+   * hash fires hashchange, Root swaps the surface, and this whole tree
+   * unmounts. Conversations live on the server, so coming back through the
+   * front page's action costs a list fetch and nothing else. */
   const goHome = () => {
-    cancelAnimationFrame(enterRafRef.current)
-    enteredRef.current = false
-    setEntered(false)
-    setSidebarCollapsed(true)
-    clearRoute()
-    progressRef.current = 0
-    applyProgress()
-    if (rootRef.current) rootRef.current.scrollTop = 0
+    window.location.hash = '#/'
   }
 
   /* ---------------------------------------------------------------- *

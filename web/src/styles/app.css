@@ -260,13 +260,21 @@
   gap: 10px;
 }
 
-/* the sidebar wordmark is the way back to the landing page */
+/* The wordmark as the way back to the front page, wherever it appears — the
+   hero rail, where it is an <a>, and both sidebar states, where it is a
+   <button> that routes through App. The colour and decoration resets are for
+   the anchor; the border and background resets are for the button. One class,
+   because the two have to be indistinguishable: the mark means the same thing
+   on every surface, so it cannot look like a link on one and a logo on
+   another. */
 .h2c-brand--home {
   margin: 0 -8px;
   padding: 6px 8px;
   border: none;
   border-radius: var(--radius-md);
   background: transparent;
+  color: inherit;
+  text-decoration: none;
   cursor: pointer;
   transition: background var(--duration-fast) var(--ease-standard);
 }
@@ -295,27 +303,21 @@
 
 /* ---- hero nav ---- */
 
-/* Centred in the rail by taking the free space on both sides, so the brand and
-   the account slot stay pinned to the edges whatever the nav contains. */
-.h2c-topnav {
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
+/* The centred nav that used to sit here is gone with the "How it works" link it
+   held: the wordmark is that route now, and the rail is down to two things — a
+   way home and a way into an account — which space-between places on its own. */
 
-/* The landing page's bracketed command, restated here so the link into it looks
-   like its destination. Brackets are drawn in CSS, keeping the accessible name
-   "How it works" rather than "[ How it works ]". */
+/* The front page's bracketed command, restated here so the one control on this
+   rail belongs to the same vocabulary as the page it came from. Brackets are
+   drawn in CSS, keeping the accessible name "Log in" rather than "[ Log in ]". */
 .h2c-navcmd {
   display: inline-flex;
   align-items: center;
   gap: 0.5em;
   padding: 8px 4px;
   color: var(--text-secondary);
-  /* 12.5px, up from 11. These two are the only chrome on the hero and both are
-     destinations — the one route to the landing page and the one route to an
-     account — so they were being quiet about the wrong thing. Tracking stays at
+  /* 12.5px, up from 11. It is the only worded chrome on the hero and it is a
+     destination, so it was being quiet about the wrong thing. Tracking stays at
      0.14em because it is set in em and scales with the size on its own. */
   font: 500 12.5px/1 var(--font-mono);
   letter-spacing: 0.14em;

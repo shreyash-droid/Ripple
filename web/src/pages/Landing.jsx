@@ -1,9 +1,17 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { DocIcon, ResumeIcon, SparkIcon, TargetIcon } from '../components/Icons'
+import { useAuth } from '../lib/auth-context'
 import '../styles/landing.css'
 
 /* ══════════════════════════════════════════════════════════════════════════
- * DIRECTION CONTRACT — "How it works" (Persuade)
+ * DIRECTION CONTRACT — the front page (Persuade)
+ *
+ * This is what a stranger arrives at. It used to be a side trip off the product
+ * — you met the chat hero first and could click through to the argument — which
+ * had the order backwards: the hero asserts, this page proves, and nobody is
+ * persuaded by the assertion they have already skipped past. So the two swapped.
+ * Every action here leaves for ENTER, the hero, which is now a door rather than
+ * a front page and is reached only by pressing something.
  *
  * THESIS: The page is the system powering up and granting access. It refuses
  *   the AI-startup scaffold — hero, three feature cards, logo wall, testimonial
@@ -45,6 +53,11 @@ import '../styles/landing.css'
  *   were dealt; the roll service was unreachable).
  * ══════════════════════════════════════════════════════════════════════════ */
 
+/* The door out of this page and into the product: App's stage at rest, which is
+   the hero. Named once because five controls point at it and a page whose only
+   job is to send you somewhere cannot afford one of them going somewhere else. */
+const ENTER = '#/try'
+
 /* One authored motion moment for the whole page: sections resolve as they are
    reached, staggered by child index. The default state is *visible* — the
    observer removes a class rather than adding one — so no JS and no
@@ -83,6 +96,50 @@ function useReveal() {
   }, [])
 
   return ref
+}
+
+/* The action, kept within reach of the whole page.
+ *
+ * The opening view carries the loud one, but this is a five-section scroll and
+ * a front page whose primary action is four screens behind the reader is a
+ * front page that argues its case and then makes you go looking. So it comes
+ * back as a floating command through the middle of the page.
+ *
+ * "The middle" is defined by the two views that already carry the action — the
+ * boot at the open and the access frame at the close — rather than by a scroll
+ * offset. That is what guarantees the floating copy can never appear beside a
+ * real one: it exists exactly in the gap where neither is on screen, so the
+ * page never shows the same button twice.
+ *
+ * Stays false where IntersectionObserver is missing, which is the right
+ * degradation: the two in-page actions are still there, unmoved.
+ */
+function useJump() {
+  const bootRef = useRef(null)
+  const accessRef = useRef(null)
+  const [away, setAway] = useState(false)
+
+  useEffect(() => {
+    const anchors = [bootRef.current, accessRef.current].filter(Boolean)
+    if (anchors.length < 2 || typeof IntersectionObserver === 'undefined') return undefined
+
+    /* One observer, one map, because the answer is about both anchors at once —
+       two independent booleans in state would let a render land between them
+       and flash the control on as the closing frame arrives. */
+    const onScreen = new Map(anchors.map((el) => [el, true]))
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) onScreen.set(entry.target, entry.isIntersecting)
+        setAway(![...onScreen.values()].some(Boolean))
+      },
+      { threshold: 0 },
+    )
+    anchors.forEach((el) => io.observe(el))
+    return () => io.disconnect()
+  }, [])
+
+  return [bootRef, accessRef, away]
 }
 
 /* ---------------------------------------------------------------- *
@@ -560,23 +617,35 @@ const FACTS = [
 ]
 
 export default function Landing() {
+  const { signedIn } = useAuth()
   const pageRef = useReveal()
+  const [bootRef, accessRef, away] = useJump()
   const [bay, setBay] = useState(1) // Coach leads: it is the clearest case
   const active = BAYS[bay]
+
+  const toTop = (e) => {
+    e.preventDefault()
+    pageRef.current?.scrollTo({
+      top: 0,
+      behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+        ? 'auto'
+        : 'smooth',
+    })
+  }
 
   return (
     <div className="rl-page" ref={pageRef}>
       {/* ============================ BOOT ============================ */}
-      <section className="rl-frame rl-boot">
+      <section className="rl-frame rl-boot" ref={bootRef}>
         <div className="rl-field" aria-hidden="true" />
 
         <header className="rl-rail">
-          {/* Bare '#', not '#/c'. The wordmark is "go back to the top of the
-              product", and #/c is the entered state — App's readRoute treats it
-              as a committed conversation and retires the hero before it ever
-              renders. Anything that is not #/c leaves the stage at progress 0,
-              which is the hero. */}
-          <a className="rl-brand" href="#">
+          {/* The mark is the way to this page from every other surface, and
+              this page is where it points — so here it returns to the top of
+              it. The href stays for the middle-click and the status bar, but
+              the handler has to do the scrolling: `#` moves the *document*, and
+              the thing that actually scrolls on this route is .rl-page. */}
+          <a className="rl-brand" href="#" onClick={toTop}>
             <span className="rl-orb" aria-hidden="true" />
             <span className="rl-brand__name">Ripple</span>
           </a>
@@ -584,9 +653,26 @@ export default function Landing() {
             <span className="rl-dot" aria-hidden="true" />
             four modes · four rubrics · one score
           </p>
-          <Command href="#/c" tone="accent">
-            Start a chat
-          </Command>
+          {/* Quiet here, loud below. The rail's job is to prove the action
+              exists before you have read anything; the one under the mark is
+              the one the page is actually asking for.
+
+              Log in sits beside it in the page's own bracketed vocabulary
+              rather than as a nav word, and it is the *plain* tone: a returning
+              user knows where their account is, and the one thing this page has
+              to win is the visitor who does not have one yet. Which is also why
+              it takes the outer slot — the accent command leads the pair, and
+              the account link trails it. It disappears
+              once there is a session, because a signed-in visitor pressing
+              "Log in" is the page telling them it has not noticed them. No
+              avatar in its place — that badge belongs to the chat shell's
+              stylesheet, which this route deliberately does not load. */}
+          <div className="rl-rail__act">
+            <Command href={ENTER} tone="accent">
+              Start a chat
+            </Command>
+            {!signedIn && <Command href="#/signin">Log in</Command>}
+          </div>
         </header>
 
         <div className="rl-boot__mid">
@@ -621,9 +707,10 @@ export default function Landing() {
           </div>
 
           {/* Deliberately the same words as the rail above it. Two names for one
-              destination inside a single viewport reads as two destinations. */}
+              destination inside a single viewport reads as two destinations —
+              so what separates them is weight, not wording. */}
           <div className="rl-boot__act">
-            <Command href="#/c" tone="accent">
+            <Command href={ENTER} tone="primary">
               Start a chat
             </Command>
             <span className="rl-boot__hint">No card. Sign in only when you send.</span>
@@ -869,7 +956,7 @@ export default function Landing() {
       </section>
 
       {/* =========================== ACCESS =========================== */}
-      <section className="rl-frame rl-access">
+      <section className="rl-frame rl-access" ref={accessRef}>
         <div className="rl-field" aria-hidden="true" />
         <div className="rl-access__mid" data-reveal>
           <h2 className="rl-display rl-display--sm">
@@ -877,7 +964,7 @@ export default function Landing() {
             <br />
             you actually score.
           </h2>
-          <Command href="#/c" tone="accent">
+          <Command href={ENTER} tone="primary">
             Start a chat
           </Command>
           <p className="rl-access__hint">
@@ -896,8 +983,20 @@ export default function Landing() {
       <footer className="rl-foot">
         <span className="rl-brand__name">Ripple</span>
         <span>four modes · four rubrics · 0–100</span>
-        <a href="#/c">Back to the chat</a>
+        <a href={ENTER}>Start a chat</a>
       </footer>
+
+      {/* Rendered only while it applies, rather than parked off-screen with a
+          class: a link that is invisible but still in the tab order is a trap
+          for anyone arriving by keyboard, and there is no exit transition worth
+          paying that for. */}
+      {away && (
+        <div className="rl-jump">
+          <Command href={ENTER} tone="primary">
+            Start a chat
+          </Command>
+        </div>
+      )}
     </div>
   )
 }

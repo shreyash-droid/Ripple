@@ -144,6 +144,55 @@
   color: var(--emerald-700);
 }
 
+/* The loud one.
+ *
+ * This page is the front door now, so the action that leaves it cannot look
+ * exactly like the quiet commands that do not. The vocabulary does not change
+ * to say so — the brackets stay, the mono stays, there is no pill of solid
+ * accent borrowed from some other product — the control is simply seated in a
+ * lit enclosure, which is the same move the world already makes when it wants
+ * something to read as powered: a hairline, a wash of the one hue, and a glow
+ * under it. Contrast comes from the enclosure, so the label can stay the same
+ * words as the rail's and still read as the bigger of the two. */
+.rl-cmd[data-tone='primary'] {
+  padding: 15px 22px;
+  font-size: 12px;
+  color: var(--text-primary);
+  border: 1px solid rgba(92, 200, 232, 0.34);
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(92, 200, 232, 0.2) 0%,
+    rgba(92, 200, 232, 0.06) 100%
+  );
+  box-shadow: inset 0 1px 0 rgba(92, 200, 232, 0.24), 0 10px 30px rgba(92, 200, 232, 0.14);
+  transition: border-color var(--duration-base) var(--ease-standard),
+    box-shadow var(--duration-base) var(--ease-standard),
+    background var(--duration-base) var(--ease-standard);
+}
+
+.rl-cmd[data-tone='primary']::before,
+.rl-cmd[data-tone='primary']::after {
+  color: var(--emerald-300);
+}
+
+/* The enclosure brightens; the brackets still travel outward, so the hover is
+   the same gesture every other command on the page makes. */
+.rl-cmd[data-tone='primary']:hover {
+  border-color: rgba(92, 200, 232, 0.55);
+  background: linear-gradient(
+    180deg,
+    rgba(92, 200, 232, 0.28) 0%,
+    rgba(92, 200, 232, 0.1) 100%
+  );
+  box-shadow: inset 0 1px 0 rgba(92, 200, 232, 0.32), 0 14px 40px rgba(92, 200, 232, 0.22);
+}
+
+.rl-cmd[data-tone='primary']:hover::before,
+.rl-cmd[data-tone='primary']:hover::after {
+  color: var(--emerald-100);
+}
+
 /* Named kicker, used only on the three pillars the page promises: who we are,
    what we do, why choose. Not grammar over every section. */
 .rl-kicker {
@@ -402,6 +451,16 @@
   gap: 20px;
   padding: 20px clamp(20px, 2.8vw, 44px);
   border-bottom: 1px solid rgba(92, 200, 232, 0.12);
+}
+
+/* The rail's right-hand pair. A gap wider than the brackets' own hover travel
+   (3px each) so the two controls never look like one four-bracket control, and
+   narrow enough that they still read as a set against the brand at the far
+   left. */
+.rl-rail__act {
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 1.6vw, 22px);
 }
 
 .rl-rail__status {
@@ -732,11 +791,14 @@
    on the page regardless: the "4" figure in Who we are is that same ring, drawn
    where it has room to be read. */
 
+/* 14px, not the 6px this sat at when the action was bare text. The command has
+   an edge of its own now, and a caption tucked under a drawn boundary reads as
+   part of the control rather than as a note about it. */
 .rl-boot__act {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 14px;
 }
 
 .rl-boot__hint,
@@ -1696,6 +1758,38 @@
   text-decoration: none;
 }
 
+/* ---- the action, carried down the page ---- *
+ *
+ * Fixed rather than sticky: the rail it would otherwise ride belongs to the
+ * boot view, and a sticky element stops sticking the moment its own section
+ * scrolls away — which is precisely the range this has to cover. It is a direct
+ * child of the scroll container, so it has to out-rank the `z-index: 1` that
+ * container puts on every one of its children.
+ *
+ * Bottom-right, clear of the reading column: this is a way out of the page, not
+ * a thing to read on the way down. It mounts only once the boot view has left,
+ * so the entrance is the whole of its motion — nothing here ever animates while
+ * the visitor is trying to read something.
+ */
+.rl-jump {
+  position: fixed;
+  right: clamp(16px, 2.4vw, 32px);
+  bottom: clamp(16px, 2.4vw, 32px);
+  z-index: 5;
+  /* The enclosure is translucent, and over a dotted field a translucent pill
+     reads as a smudge. This is the panel it actually sits on. */
+  border-radius: 999px;
+  background: var(--black-canvas);
+  animation: rl-jump-in 420ms var(--ease-emphasized) both;
+}
+
+@keyframes rl-jump-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
 /* ------------------------------------------------------------------ *
  * responsive
  * ------------------------------------------------------------------ */
@@ -1736,6 +1830,20 @@
 
   .rl-rail__status {
     display: none;
+  }
+
+  /* Two commands now share the space one used to. Dropping the tracking is what
+     buys the room — at 0.16em, "START A CHAT" spends nearly two characters'
+     worth of width on air alone, and it is the one thing here that can be given
+     back without shrinking the label past legibility. */
+  .rl-rail__act {
+    gap: 10px;
+  }
+
+  .rl-rail .rl-cmd {
+    padding: 10px 2px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
   }
 
   /* The flanking captions stack under the core rather than squeezing it to a
@@ -1793,6 +1901,14 @@
   .rl-fig {
     max-width: 172px;
   }
+
+  /* Tighter, because at 360px the enclosure is a real fraction of the width and
+     a floating action that covers a quarter of the line under it stops being a
+     shortcut and starts being an obstruction. */
+  .rl-jump .rl-cmd[data-tone='primary'] {
+    padding: 12px 16px;
+    font-size: 11px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1808,7 +1924,8 @@
   .rl-orbit--flow,
   .rl-flank--l,
   .rl-flank--r,
-  .rl-boot__act {
+  .rl-boot__act,
+  .rl-jump {
     animation: none;
   }
 

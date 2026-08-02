@@ -15,13 +15,20 @@ import { useAuth } from './lib/auth-context'
  *
  * Routes are hashes because the hero and the chat are one continuous
  * scroll-driven stage; a real router would unmount the thing the transition
- * animates. Landing is a genuinely separate destination, so it gets its own.
+ * animates. The product therefore owns a whole family of hashes — #/try is its
+ * front door (the hero at rest) and #/c… every conversation past it.
+ *
+ * The default is the argument, not the app. A stranger arriving at the bare URL
+ * used to land on a hero that asserted the product; now they land on the page
+ * that makes the case for it and press an action to enter. Which also means the
+ * fallback has to be `landing` rather than `app`: #/how-it-works, the address
+ * this page used to live at, still resolves to the page it always meant.
  */
 function readRoute() {
   const hash = window.location.hash
-  if (hash.startsWith('#/how-it-works')) return 'landing'
   if (hash.startsWith('#/signin')) return 'signin'
-  return 'app'
+  if (hash.startsWith('#/try') || hash.startsWith('#/c')) return 'app'
+  return 'landing'
 }
 
 export default function Root() {
