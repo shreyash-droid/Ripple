@@ -93,6 +93,13 @@ functions:
       - httpApi:
           path: /api/conversations/{id}
           method: delete
+  # The dashboard's one read: every scored turn this user has, oldest first.
+  progress:
+    handler: handlers/progress.handler
+    events:
+      - httpApi:
+          path: /api/progress
+          method: get
   embedtest:
     handler: handlers/embedtest.handler
     events:

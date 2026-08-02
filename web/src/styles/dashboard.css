@@ -1,0 +1,893 @@
+/* The dashboard — the Operate world, built as an instrument panel.
+ *
+ * Same namespace as the chat shell (.h2c-) and the same materials: tonal
+ * surfaces, the 8/12/16/22px radius scale, --shadow-card for depth, and every
+ * measurement in JetBrains Mono with tabular numerals. It is deliberately NOT
+ * the landing page's hairline-and-console language; DESIGN.md keeps the two
+ * apart, and a progress view dressed as the marketing page would read as a
+ * brochure of the reader's own data.
+ *
+ * WHY IT LOOKS LIKE THIS. The first version was cards inside cards with eleven
+ * numbers at the same weight, which is a settings screen wearing a chart. Two
+ * rules fixed it and both are load-bearing:
+ *
+ *   · ONE CARD PER MODE, and nothing bounded inside it. Structure below the
+ *     panel is rules, addresses and dividers. A panel inside a panel is a
+ *     container standing in for hierarchy.
+ *   · ONE DOMINANT FIGURE PER PANEL. The masthead's delta is the only thing
+ *     allowed at the top of the measurement ramp (34px); the rail sits a full
+ *     step down at 22px and row values at 13px. The whole ramp — 34 / 22 / 13 /
+ *     11 — is the one DESIGN.md documents, so the hierarchy is the system's
+ *     own, turned up rather than invented.
+ *
+ * COLOUR DISCIPLINE, two rules that do not overlap:
+ *   · Numerals band. A score figure takes --tone from the three-band scale, the
+ *     same way the session strip in the thread already does.
+ *   · Marks do not. Lines, dots and bars are monochrome, and the accent is
+ *     spent solely on marking what cleared STRONG. A three-colour ramp on the
+ *     marks would double-encode height as hue.
+ */
+
+.h2c-dash {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--surface-canvas);
+  color: var(--text-primary);
+}
+
+/* ------------------------------------------------------------------ *
+ * top rail
+ * ------------------------------------------------------------------ */
+
+/* Sticky, unlike the chat's absolute top bar: this page is a long scroll with
+   no stage under it, and the way back to the chat should not be somewhere near
+   the top of a document the reader has left behind. Opaque, not translucent —
+   a blur here would be sampling flat canvas, and nothing moves behind it. */
+.h2c-dash__bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: var(--space-4) clamp(var(--space-4), 3vw, var(--space-7));
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface-canvas);
+}
+
+.h2c-dash__nav {
+  margin-right: auto;
+  margin-left: var(--space-4);
+}
+
+/* ------------------------------------------------------------------ *
+ * the reading column
+ * ------------------------------------------------------------------ */
+
+.h2c-dash__body {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: clamp(var(--space-7), 6vh, var(--space-10)) var(--space-6) var(--space-12);
+}
+
+.h2c-dash__lead {
+  margin-bottom: var(--space-9);
+}
+
+/* The one kicker on the page. One named kicker is a system; an eyebrow over
+   every block is grammar nobody chose. */
+.h2c-dash__kicker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  color: var(--text-accent);
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.h2c-dash__lead h1 {
+  margin: 0 0 var(--space-4);
+  font: var(--text-display-md);
+  letter-spacing: var(--tracking-tight);
+}
+
+/* 62ch, the cap the lede takes everywhere else in the system. */
+.h2c-dash__lede {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--text-muted);
+  font: var(--text-body-md);
+}
+
+.h2c-dash__note {
+  margin: 0 0 var(--space-6);
+  color: var(--text-faint);
+  font: var(--text-body-sm);
+}
+
+/* ------------------------------------------------------------------ *
+ * the measurement rail
+ * ------------------------------------------------------------------ */
+
+/* Readings on one instrument, not a row of little cards. No border, no ground,
+   no radius per cell — a 1px divider between them does all the separating, and
+   that is the difference between an instrument face and a dashboard of tiles. */
+.h2c-dash__rail {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.h2c-dash__rail--top {
+  margin-top: var(--space-7);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.h2c-dash__cell {
+  flex: 1 1 0;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0 var(--space-6);
+}
+
+.h2c-dash__cell:first-child {
+  padding-left: 0;
+}
+
+.h2c-dash__cell + .h2c-dash__cell {
+  border-left: 1px solid var(--border-subtle);
+}
+
+.h2c-dash__cell-label {
+  color: var(--text-faint);
+  font: 400 11px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* 22px — the "chart values" step of the documented measurement ramp, a full
+   step under the masthead figure so the rail reads as support for it. */
+.h2c-dash__cell-value {
+  color: var(--tone, var(--text-primary));
+  font: 500 22px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-tight);
+}
+
+.h2c-dash__cell em {
+  color: var(--text-faint);
+  font: var(--text-body-sm);
+  font-style: normal;
+}
+
+/* ------------------------------------------------------------------ *
+ * a mode panel
+ * ------------------------------------------------------------------ */
+
+/* The one bounded box per mode. Everything inside it is separated by rules. */
+.h2c-dash__panel {
+  margin-bottom: var(--space-8);
+  padding: var(--space-7) var(--space-7) var(--space-6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card);
+}
+
+/* ---- the masthead ---- */
+
+.h2c-dash__masthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.h2c-dash__ident {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* The address plate — the product's own `CO` / `RES` device, in the app's
+   materials rather than the landing page's bare mono. */
+.h2c-dash__plate {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--emerald-300);
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+}
+
+.h2c-dash__ident h2 {
+  margin: 0 0 var(--space-1);
+  font: var(--text-heading-lg);
+  letter-spacing: var(--tracking-tight);
+}
+
+.h2c-dash__ident p {
+  margin: 0;
+  max-width: 46ch;
+  color: var(--text-muted);
+  font: var(--text-body-sm);
+}
+
+/* THE figure. 34px is the top of the documented measurement ramp and this is
+   the only thing on the panel that gets it — the product's whole claim is that
+   the number moves, so the amount it moved is what leads. */
+.h2c-dash__lead-figure {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+  text-align: right;
+}
+
+.h2c-dash__lead-figure b {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-primary);
+  font: 500 34px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+.h2c-dash__lead-figure[data-dir='up'] b {
+  color: var(--emerald-300);
+}
+
+.h2c-dash__lead-figure span {
+  max-width: 24ch;
+  color: var(--text-faint);
+  font: var(--text-body-sm);
+}
+
+/* Drawn, not a glyph — ▲ is missing from JetBrains Mono and falls through to
+   whatever the OS has, which lands a differently-weighted triangle beside the
+   one figure the page is built on. */
+.h2c-dash__dir {
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+/* ---- blocks inside the panel ---- */
+
+.h2c-dash__block {
+  padding-top: var(--space-7);
+}
+
+.h2c-dash__block-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+.h2c-dash__block-head h3 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  font: var(--text-heading-sm);
+}
+
+/* The qualification lives inside the heading, so a wrap can never separate the
+   two and leave a bare label above a chart. */
+.h2c-dash__block-head h3 em {
+  color: var(--text-faint);
+  font: var(--text-body-sm);
+  font-style: normal;
+}
+
+.h2c-dash__blank {
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.h2c-dash__blank p {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--text-muted);
+  font: var(--text-body-sm);
+}
+
+/* ---- the chart / table switch ---- */
+
+.h2c-dash__toggle {
+  flex-shrink: 0;
+  padding: 7px 13px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-standard),
+    background var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+
+.h2c-dash__toggle:hover {
+  border-color: var(--border-emphasis);
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+
+.h2c-dash__toggle:active {
+  background: var(--surface-overlay);
+}
+
+/* ------------------------------------------------------------------ *
+ * the trend chart
+ * ------------------------------------------------------------------ */
+
+.h2c-dash__plot {
+  position: relative;
+  width: 100%;
+}
+
+/* The instrument face. A tonal ground gives the plot a body so it reads as a
+   measured field; an outline around it would be a card inside the panel. */
+.h2c-dash__face {
+  fill: var(--surface-raised);
+  opacity: 0.55;
+}
+
+/* One step off the surface and solid. Dashing a grid reads as "projection"
+   when it is only a ruler. */
+.h2c-dash__grid {
+  stroke: var(--border-subtle);
+  stroke-width: 1;
+}
+
+.h2c-dash__tick,
+.h2c-dash__axis {
+  fill: var(--text-faint);
+  font: 400 11px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+}
+
+/* The one dashed line here, and it earns it: this is the bar the scoring prompt
+   itself calls strong, not chrome. */
+.h2c-dash__thresh {
+  stroke: var(--border-accent);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.h2c-dash__thresh-label {
+  fill: var(--emerald-300);
+  font: 500 11px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* De-emphasised on purpose. The line carries the shape of the series; the
+   accent is reserved for the turns that cleared the threshold, which is the
+   only comparison this chart exists to make. */
+.h2c-dash__line {
+  fill: none;
+  stroke: var(--text-faint);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The 2px ring is in the panel's own colour, so dots stay legible where they
+   sit on the line or crowd each other. It is part of the hit target. */
+.h2c-dash__dot {
+  fill: var(--text-muted);
+  stroke: var(--surface-card);
+  stroke-width: 2;
+  transition: r var(--duration-fast) var(--ease-standard);
+}
+
+.h2c-dash__dot[data-strong] {
+  fill: var(--emerald-500);
+}
+
+.h2c-dash__dot[data-on] {
+  fill: var(--emerald-300);
+}
+
+.h2c-dash__endlabel {
+  fill: var(--text-primary);
+  font: 500 13px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Follows the point it describes, offset so it never covers it. Pointer-events
+   off: a tooltip that can intercept the pointer flickers itself in and out. */
+.h2c-dash__tip {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  transform: translate(-50%, calc(-100% - 16px));
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 240px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-overlay);
+  box-shadow: var(--shadow-raised);
+  white-space: nowrap;
+}
+
+.h2c-dash__tip b {
+  color: var(--text-primary);
+  font: 500 22px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.h2c-dash__tip span {
+  color: var(--text-muted);
+  font: var(--text-body-sm);
+}
+
+.h2c-dash__tip-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ------------------------------------------------------------------ *
+ * register rows — criteria and sessions
+ * ------------------------------------------------------------------ */
+
+/* A rule over the list and one under every row, with a mono address in the
+   first track. The system's answer to a grid of little boxes, in the app's
+   materials: hover is a tonal step, never an outline. */
+.h2c-dash__rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Criterion rows lay out directly; a session row's grid lives on its <a>, since
+   the whole row is the link and the link has to be the thing that gets the
+   padding and the hover ground. Two rules rather than one shared grid with
+   `subgrid` on the anchor — subgrid buys nothing here and costs a browser
+   floor for a five-column list. */
+.h2c-dash__rows > li {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.h2c-dash__rows > li:not(.h2c-dash__session) {
+  display: grid;
+  grid-template-columns: 3.2em minmax(0, 1fr) minmax(0, 1.1fr) 2.8em 4.6em;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-2);
+}
+
+.h2c-dash__addr {
+  color: var(--text-faint);
+  font: 400 11px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+}
+
+.h2c-dash__row-name {
+  overflow: hidden;
+  color: var(--text-primary);
+  font: var(--text-body-sm);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-transform: capitalize;
+}
+
+.h2c-dash__row-val {
+  color: var(--tone, var(--text-primary));
+  font: 500 13px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* The track is a tonal step under the fill, so the unfilled part still reads as
+   part of the same measurement rather than as empty space. */
+.h2c-dash__track {
+  position: relative;
+  display: block;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  overflow: hidden;
+}
+
+/* Square at the baseline, rounded at the data end — the end is the
+   measurement, the origin is the axis. The inline width is the target and the
+   animation only rides up to it, so a failed animation still shows the value. */
+.h2c-dash__track i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--fill);
+  min-width: 4px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--text-faint);
+  transform-origin: left center;
+  animation: h2c-dash-fill var(--duration-slow) var(--ease-emphasized) both;
+}
+
+.h2c-dash__track i[data-strong] {
+  background: var(--emerald-500);
+}
+
+@keyframes h2c-dash-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* ---- delta chip ---- */
+
+/* Direction, not band: going from 20 to 40 is real improvement even though 40
+   is still a poor score, and painting that delta red would call it a failure. */
+.h2c-dash__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-faint);
+  font: 500 13px/1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.h2c-dash__delta[data-dir='up'] {
+  color: var(--emerald-300);
+}
+
+.h2c-dash__delta[data-dir='down'] {
+  color: var(--text-muted);
+}
+
+.h2c-dash__delta em {
+  color: var(--text-faint);
+  font: var(--text-body-sm);
+  font-style: normal;
+}
+
+/* ---- sessions ---- */
+
+.h2c-dash__session a {
+  display: grid;
+  grid-template-columns: 5.2em minmax(0, 1fr) 4.4em auto 2.8em 4.6em;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-2);
+  border-radius: var(--radius-sm);
+  color: inherit;
+  text-decoration: none;
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+
+.h2c-dash__session a:hover {
+  background: var(--surface-raised);
+  text-decoration: none;
+}
+
+.h2c-dash__session-count {
+  color: var(--text-faint);
+  font: var(--text-body-sm);
+  white-space: nowrap;
+}
+
+.h2c-dash__spark {
+  overflow: visible;
+}
+
+.h2c-dash__spark polyline {
+  fill: none;
+  stroke: var(--text-faint);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.h2c-dash__spark circle {
+  fill: var(--text-muted);
+}
+
+.h2c-dash__spark circle[data-strong] {
+  fill: var(--emerald-500);
+}
+
+/* Three bands, and only on numerals — the same lookup the thread's session
+   strip uses, so a score means the same colour wherever it is read. */
+.h2c-dash [data-tone='high'] {
+  --tone: var(--emerald-500);
+}
+
+.h2c-dash [data-tone='mid'] {
+  --tone: var(--amber-500);
+}
+
+.h2c-dash [data-tone='low'] {
+  --tone: var(--red-500);
+}
+
+/* ------------------------------------------------------------------ *
+ * the table twin
+ * ------------------------------------------------------------------ */
+
+/* Its own scroller, so a long session title can never make the page scroll
+   sideways. */
+.h2c-dash__tablewrap {
+  overflow-x: auto;
+}
+
+.h2c-dash__table {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--text-body-sm);
+}
+
+.h2c-dash__table caption {
+  margin-bottom: var(--space-4);
+  color: var(--text-faint);
+  font: var(--text-body-sm);
+  text-align: left;
+}
+
+.h2c-dash__table th,
+.h2c-dash__table td {
+  padding: var(--space-3) var(--space-4) var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.h2c-dash__table th {
+  color: var(--text-faint);
+  font: 400 11px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.h2c-dash__table td {
+  color: var(--text-muted);
+}
+
+/* tabular here specifically: a column of numbers that has to align. */
+.h2c-dash__table td:last-child {
+  color: var(--tone, var(--text-primary));
+  font: 500 13px/1.5 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.h2c-dash__outof {
+  color: var(--text-faint);
+  font: 400 11px/1 var(--font-mono);
+}
+
+.h2c-dash__table a {
+  color: var(--text-primary);
+}
+
+/* ------------------------------------------------------------------ *
+ * loading
+ * ------------------------------------------------------------------ */
+
+/* A skeleton of the real layout, not a spinner in the middle of the content —
+   the composition does not change when the data lands. */
+.h2c-dash__sk {
+  display: block;
+  width: var(--w);
+  height: var(--h);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  animation: h2c-dash-pulse 1.6s var(--ease-standard) infinite;
+}
+
+.h2c-dash__sk-mast {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.h2c-dash__sk-rail {
+  display: flex;
+  gap: var(--space-6);
+  padding: var(--space-6) 0 var(--space-7);
+}
+
+.h2c-dash__sk-rail .h2c-dash__sk {
+  flex: 1 1 0;
+}
+
+@keyframes h2c-dash-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * failure and empty
+ * ------------------------------------------------------------------ */
+
+/* A failure worth reading. Bounded and left-aligned rather than a red line
+   under the lede: the detail names a route and a base URL, and those are things
+   someone copies out. Red is on the heading alone — the whole panel in danger
+   colour would make the instructions the alarm. */
+.h2c-dash__fail {
+  max-width: 68ch;
+  padding: var(--space-6);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+}
+
+.h2c-dash__fail h2 {
+  margin: 0 0 var(--space-3);
+  color: var(--text-danger);
+  font: var(--text-heading-sm);
+}
+
+.h2c-dash__fail p {
+  margin: 0 0 var(--space-5);
+  color: var(--text-muted);
+  font: var(--text-body-sm);
+  /* the detail carries a URL, which has no spaces to break on */
+  overflow-wrap: anywhere;
+}
+
+/* Teaches the interface rather than saying "nothing here": it names which two
+   modes score, why the other two do not, and gives the one action that ends
+   the state. */
+.h2c-dash__empty {
+  padding: var(--space-11) var(--space-7);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+
+.h2c-dash__empty h2 {
+  margin: 0 0 var(--space-3);
+  font: var(--text-heading-lg);
+  letter-spacing: var(--tracking-tight);
+}
+
+.h2c-dash__empty p {
+  margin: 0 auto var(--space-6);
+  max-width: 52ch;
+  color: var(--text-muted);
+  font: var(--text-body-sm);
+}
+
+/* The one filled button on the page. Filled buttons are legitimate inside the
+   app shell for in-product actions, and an empty state's whole job is the one
+   action that ends it. */
+.h2c-dash__cta {
+  display: inline-flex;
+  align-items: center;
+  padding: 11px 22px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-accent);
+  color: var(--text-on-accent);
+  font: var(--text-label);
+  text-decoration: none;
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+
+.h2c-dash__cta:hover {
+  background: var(--surface-accent-hover);
+  text-decoration: none;
+}
+
+/* ------------------------------------------------------------------ *
+ * responsive — structural, never fluid type
+ * ------------------------------------------------------------------ */
+
+@media (max-width: 860px) {
+  .h2c-dash__panel {
+    padding: var(--space-5);
+  }
+
+  /* The figure drops under the identity rather than being squeezed beside it —
+     at this width the two were fighting for the same line and the mode name
+     was the one that lost. */
+  .h2c-dash__masthead {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-5);
+  }
+
+  .h2c-dash__lead-figure {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  /* Sparkline and turn count go first: at this width the title is what a reader
+     scans for, and it was down to a few characters before its ellipsis. */
+  .h2c-dash__session .h2c-dash__session-count,
+  .h2c-dash__session .h2c-dash__spark {
+    display: none;
+  }
+
+  .h2c-dash__session a {
+    grid-template-columns: 5.2em minmax(0, 1fr) 2.8em 4.6em;
+  }
+}
+
+@media (max-width: 560px) {
+  /* The rail wraps to two readings a row instead of shrinking four into
+     unreadable columns. */
+  .h2c-dash__cell {
+    flex: 1 1 44%;
+    padding: var(--space-4) var(--space-5);
+  }
+
+  .h2c-dash__cell:first-child,
+  .h2c-dash__cell:nth-child(3) {
+    padding-left: 0;
+  }
+
+  .h2c-dash__cell:nth-child(3) {
+    border-left: 0;
+  }
+
+  /* The track drops to its own row rather than being squeezed to a stub — a
+     20px bar encodes nothing. */
+  .h2c-dash__rows > li:not(.h2c-dash__session) {
+    grid-template-columns: 3.2em minmax(0, 1fr) 2.8em 4.6em;
+  }
+
+  .h2c-dash__rows > li:not(.h2c-dash__session) .h2c-dash__track {
+    grid-column: 1 / -1;
+    order: 1;
+  }
+
+  /* Tightens, never hides. On a phone this is the only route back to the chat —
+     the wordmark beside it goes to the front page — so dropping it would strand
+     the reader on their own dashboard. */
+  .h2c-dash__bar {
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .h2c-dash__nav {
+    margin-left: var(--space-2);
+  }
+
+  /* The wordmark gives way before the orb does — the same order the chat shell
+     sheds its brand in at this width. */
+  .h2c-dash__bar .h2c-brand__name {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .h2c-dash__track i,
+  .h2c-dash__sk {
+    animation: none;
+  }
+
+  .h2c-dash__dot {
+    transition: none;
+  }
+}

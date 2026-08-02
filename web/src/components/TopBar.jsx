@@ -24,7 +24,16 @@ export default function TopBar({ user, signedIn }) {
       </a>
 
       {signedIn ? (
-        <ProfileBadge user={user} />
+        <div className="h2c-topbar__account">
+          {/* Only ever shown to a signed-in visitor, because the page behind it
+              is nothing but their own history. It sits beside the avatar rather
+              than in the middle of the rail: it belongs to the account, not to
+              the site. */}
+          <a className="h2c-navcmd" href="#/dashboard">
+            <span>Progress</span>
+          </a>
+          <ProfileBadge user={user} />
+        </div>
       ) : (
         <a className="h2c-navcmd is-accent" href="#/signin">
           <span>Log in</span>

@@ -307,6 +307,15 @@
    held: the wordmark is that route now, and the rail is down to two things — a
    way home and a way into an account — which space-between places on its own. */
 
+/* The account end of the rail. One slot as far as the flex layout is concerned,
+   so adding the progress link beside the avatar does not turn the rail into a
+   three-way split and pull the wordmark off the left edge. */
+.h2c-topbar__account {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 1.5vw, 18px);
+}
+
 /* The front page's bracketed command, restated here so the one control on this
    rail belongs to the same vocabulary as the page it came from. Brackets are
    drawn in CSS, keeping the accessible name "Log in" rather than "[ Log in ]". */
@@ -693,6 +702,33 @@
 
 .h2c-newchat:hover {
   background: var(--surface-3);
+}
+
+/* The secondary sidebar destination, under the primary action. Same height and
+   gap as the button above it so the two read as one stack, but no border and no
+   ground: the difference between "the thing to do here" and "the other place to
+   be" is weight, and giving both a filled box makes the panel look like it is
+   offering two equal starts. */
+.h2c-sidelink {
+  width: 100%;
+  height: 38px;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font: 500 13px/1 var(--font-sans);
+  text-decoration: none;
+  transition: background var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard);
+}
+
+.h2c-sidelink:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  text-decoration: none;
 }
 
 .h2c-sidebar__label {

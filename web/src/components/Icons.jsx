@@ -247,3 +247,18 @@ export function TrendIcon({ size = 13 }) {
     </Svg>
   )
 }
+
+/* The dashboard — three columns rising off a baseline. Deliberately not the
+   four-pane "app grid" every product uses for this: the page is a progress
+   view, and columns of different heights say measurement where four equal
+   rectangles say "some other screen". */
+export function DashIcon({ size = 15 }) {
+  return (
+    <Svg size={size} strokeWidth={1.9}>
+      <path d="M4 20h16" />
+      <path d="M7 20v-6" />
+      <path d="M12 20V8" />
+      <path d="M17 20v-9" />
+    </Svg>
+  )
+}

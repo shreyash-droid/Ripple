@@ -1,6 +1,18 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import ProfileBadge from '../components/ProfileBadge'
 import { DocIcon, ResumeIcon, SparkIcon, TargetIcon } from '../components/Icons'
 import { useAuth } from '../lib/auth-context'
+import { displayName, initialsOf } from '../lib/session'
+/* For .h2c-avatar and the account popover the badge in the rail is built from.
+   Same reason AuthScreen imports it: every rule in there is .h2c-scoped, so it
+   carries nothing else onto this page, and the alternative is restating the
+   avatar and its popover a third time in .rl- prefixes. */
+import '../styles/app.css'
+/* The one threshold, imported rather than restated. This page draws the line at
+   75 in two charts and the dashboard draws it in two more; a second copy of the
+   number is a second thing that can drift away from the band anchors in
+   backend/lib/rubrics.js. */
+import { STRONG } from '../lib/progress'
 import '../styles/landing.css'
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -105,23 +117,31 @@ function useReveal() {
  * front page that argues its case and then makes you go looking. So it comes
  * back as a floating command through the middle of the page.
  *
- * "The middle" is defined by the two views that already carry the action — the
- * boot at the open and the access frame at the close — rather than by a scroll
- * offset. That is what guarantees the floating copy can never appear beside a
- * real one: it exists exactly in the gap where neither is on screen, so the
- * page never shows the same button twice.
+ * "The middle" is defined by the views that already carry an action — the boot
+ * at the open, the dashboard section's own command, and the access frame at the
+ * close — rather than by a scroll offset. That is what guarantees the floating
+ * copy can never appear beside a real one: it exists exactly in the gap where
+ * none of them is on screen, so the page never shows two commands at once.
+ *
+ * The dashboard section is in that list for a reason that cost a bug: it is
+ * mid-page, so the floating command was live while it was being read, and once
+ * the section stacks to one column its own [ Open your dashboard ] sits bottom-
+ * left of the viewport with a fixed [ Start a chat ] pinned bottom-right. Two
+ * different destinations, close enough to hit the wrong one — and on a narrow
+ * screen they overlap outright. An anchor is the fix, not a z-index.
  *
  * Stays false where IntersectionObserver is missing, which is the right
- * degradation: the two in-page actions are still there, unmoved.
+ * degradation: the in-page actions are still there, unmoved.
  */
 function useJump() {
   const bootRef = useRef(null)
+  const boardRef = useRef(null)
   const accessRef = useRef(null)
   const [away, setAway] = useState(false)
 
   useEffect(() => {
-    const anchors = [bootRef.current, accessRef.current].filter(Boolean)
-    if (anchors.length < 2 || typeof IntersectionObserver === 'undefined') return undefined
+    const anchors = [bootRef.current, boardRef.current, accessRef.current].filter(Boolean)
+    if (!anchors.length || typeof IntersectionObserver === 'undefined') return undefined
 
     /* One observer, one map, because the answer is about both anchors at once —
        two independent booleans in state would let a render land between them
@@ -139,7 +159,7 @@ function useJump() {
     return () => io.disconnect()
   }, [])
 
-  return [bootRef, accessRef, away]
+  return [bootRef, boardRef, accessRef, away]
 }
 
 /* ---------------------------------------------------------------- *
@@ -219,16 +239,57 @@ const DEMO = {
   next: 'Re-run this with one number in it — how long the migration took, or how many services it touched.',
 }
 
-/* Where the scoring prompt's own band anchors call an answer strong. Shared by
-   the chart's threshold and its colour bands so the page cannot drift from the
-   scale the backend actually applies. */
-const STRONG = 75
-
 // One session, three turns. The whole product argument in three integers.
 const TREND = [
   { turn: 1, score: 41, label: 'first attempt' },
   { turn: 2, score: 63, label: 'added specifics' },
   { turn: 3, score: 84, label: 'named the outcome' },
+]
+
+/* The dashboard, drawn rather than screenshotted.
+ *
+ * A screenshot of a real dashboard would either be someone's actual data or a
+ * mocked-up image that ages the moment the UI changes. This is neither: it is
+ * the page's own vocabulary — hairlines, one accent, mono measurements — drawing
+ * the same three instruments the dashboard itself renders, from constants that
+ * live next to the rest of the page's synthetic evidence and are labelled
+ * synthetic on the section, the same as the scorecard above it.
+ *
+ * Eight turns across four sittings, because the argument here is the one thing
+ * a single session cannot show: that the line keeps going after you close the
+ * tab and come back a week later. */
+const BOARD = {
+  turns: [38, 41, 52, 63, 58, 71, 79, 84],
+  criteria: [
+    { key: 'structure', label: 'Structure', average: 74 },
+    { key: 'specifics', label: 'Specifics', average: 61 },
+    { key: 'impact', label: 'Impact', average: 68 },
+    { key: 'ownership', label: 'Ownership', average: 77 },
+  ],
+}
+
+const BOARD_SHOWS = [
+  {
+    address: 'CO',
+    claim: 'Coach, session by session',
+    body:
+      'Every scored answer in order, against the line the model itself calls strong — and which ' +
+      'of the four criteria moved to get you there.',
+  },
+  {
+    address: 'RES',
+    claim: 'Resume Review, draft by draft',
+    body:
+      'Each pass over your resume scored on its own rubric, so the third draft is measured ' +
+      'against the first rather than against a feeling.',
+  },
+  {
+    address: '—',
+    claim: 'Never one blended number',
+    body:
+      'The two rubrics measure different things, so they are never averaged together. Two ' +
+      'panels, two baselines, and both start the day you arrived.',
+  },
 ]
 
 const REGISTER = [
@@ -616,12 +677,146 @@ const FACTS = [
   { value: '1', label: 'Modes per conversation', Fig: FigLane },
 ]
 
+/* ---- the dashboard, drawn ---- *
+ *
+ * The one figure on this page that depicts another screen, so the temptation is
+ * a device frame and a fake window chrome. It gets neither: what is drawn is
+ * the three instruments the dashboard actually renders — the trend against the
+ * threshold, the criterion bars, and the stat readouts — in this page's own
+ * hairlines and single accent, at a scale where they read as a diagram of a
+ * measurement rather than as a thumbnail of a screenshot.
+ *
+ * Marks carry `vector-effect="non-scaling-stroke"` so a hairline stays a
+ * hairline at every width. Without it the whole figure is scaled by the
+ * viewBox and the "1px rule" that carries this page's structure would render at
+ * 0.6px on a phone and 1.8px on a monitor.
+ */
+const FIG = { w: 320, h: 210 }
+
+function FigBoard() {
+  const plot = { x: 16, y: 46, w: 288, h: 76 }
+  const pts = BOARD.turns
+  const px = (i) => plot.x + (i / (pts.length - 1)) * plot.w
+  const py = (v) => plot.y + plot.h - (v / 100) * plot.h
+
+  const bar = { x: 16, y: 148, w: 190, gap: 15 }
+
+  return (
+    <svg
+      className="rl-board__fig"
+      viewBox={`0 0 ${FIG.w} ${FIG.h}`}
+      aria-hidden="true"
+      focusable="false"
+    >
+      {/* the three readouts along the top, drawn as what they are: a label rule
+          and a numeral, which is all a stat tile has ever been */}
+      {[
+        { x: 16, k: 'TURNS', v: '8' },
+        { x: 116, k: 'LATEST', v: '84' },
+        { x: 216, k: 'SINCE 1ST', v: '+46' },
+      ].map((s) => (
+        <g key={s.k} className="rl-board__stat">
+          <line className="rl-board__rule" x1={s.x} y1="14" x2={s.x + 88} y2="14" />
+          <text className="rl-board__k" x={s.x} y="27">
+            {s.k}
+          </text>
+          <text className="rl-board__v" x={s.x + 88} y="27" textAnchor="end">
+            {s.v}
+          </text>
+        </g>
+      ))}
+
+      {/* the threshold, and the only dashed line in the figure */}
+      <line
+        className="rl-board__thresh"
+        x1={plot.x}
+        y1={py(STRONG)}
+        x2={plot.x + plot.w}
+        y2={py(STRONG)}
+      />
+      <text className="rl-board__k" x={plot.x + plot.w} y={py(STRONG) - 6} textAnchor="end">
+        {STRONG}
+      </text>
+
+      <polyline
+        className="rl-board__line"
+        points={pts.map((v, i) => `${px(i)},${py(v)}`).join(' ')}
+      />
+
+      {/* the accent is spent on the turns that cleared the bar, and on nothing
+          else in this figure — the same discipline the real chart runs */}
+      {pts.map((v, i) => (
+        <circle
+          key={i}
+          className="rl-board__dot"
+          cx={px(i)}
+          cy={py(v)}
+          r={i === pts.length - 1 ? 3.4 : 2.4}
+          data-strong={v >= STRONG || undefined}
+        />
+      ))}
+
+      <line
+        className="rl-board__axis"
+        x1={plot.x}
+        y1={plot.y + plot.h}
+        x2={plot.x + plot.w}
+        y2={plot.y + plot.h}
+      />
+
+      {BOARD.criteria.map((c, i) => (
+        <g key={c.key} className="rl-board__bar">
+          <text className="rl-board__k" x={bar.x} y={bar.y + i * bar.gap + 3}>
+            {c.label.toUpperCase()}
+          </text>
+          <line
+            className="rl-board__track"
+            x1={bar.x + 78}
+            y1={bar.y + i * bar.gap}
+            x2={bar.x + 78 + bar.w - 78}
+            y2={bar.y + i * bar.gap}
+          />
+          <line
+            className="rl-board__fill"
+            data-strong={c.average >= STRONG || undefined}
+            x1={bar.x + 78}
+            y1={bar.y + i * bar.gap}
+            x2={bar.x + 78 + ((bar.w - 78) * c.average) / 100}
+            y2={bar.y + i * bar.gap}
+          />
+          <text
+            className="rl-board__v rl-board__v--sm"
+            x={FIG.w - 16}
+            y={bar.y + i * bar.gap + 3}
+            textAnchor="end"
+          >
+            {c.average}
+          </text>
+        </g>
+      ))}
+    </svg>
+  )
+}
+
 export default function Landing() {
-  const { signedIn } = useAuth()
+  const { user, signedIn } = useAuth()
   const pageRef = useReveal()
-  const [bootRef, accessRef, away] = useJump()
+  const [bootRef, boardRef, accessRef, away] = useJump()
   const [bay, setBay] = useState(1) // Coach leads: it is the clearest case
   const active = BAYS[bay]
+
+  /* The same derivation the chat shell and the dashboard use, from the same
+     helpers — one person cannot have two different avatars depending on which
+     surface they are standing on. */
+  const identity = useMemo(
+    () => ({
+      name: displayName(user),
+      initials: initialsOf(user),
+      email: user?.email || '',
+      avatar: user?.avatar_url || '',
+    }),
+    [user],
+  )
 
   const toTop = (e) => {
     e.preventDefault()
@@ -662,16 +857,25 @@ export default function Landing() {
               user knows where their account is, and the one thing this page has
               to win is the visitor who does not have one yet. Which is also why
               it takes the outer slot — the accent command leads the pair, and
-              the account link trails it. It disappears
-              once there is a session, because a signed-in visitor pressing
-              "Log in" is the page telling them it has not noticed them. No
-              avatar in its place — that badge belongs to the chat shell's
-              stylesheet, which this route deliberately does not load. */}
+              the account link trails it. It disappears once there is a session,
+              because a signed-in visitor pressing "Log in" is the page telling
+              them it has not noticed them — the avatar takes its place, which is
+              the same swap the chat shell's rail makes. */}
           <div className="rl-rail__act">
             <Command href={ENTER} tone="accent">
               Start a chat
             </Command>
-            {!signedIn && <Command href="#/signin">Log in</Command>}
+            {/* The account slot, either way round: a stranger gets the way in,
+                a returning user gets the one page that is only theirs and the
+                badge that says who "theirs" means. */}
+            {signedIn ? (
+              <>
+                <Command href="#/dashboard">Dashboard</Command>
+                <ProfileBadge user={identity} className="rl-rail__badge" />
+              </>
+            ) : (
+              <Command href="#/signin">Log in</Command>
+            )}
           </div>
         </header>
 
@@ -939,6 +1143,73 @@ export default function Landing() {
         </figure>
       </section>
 
+      {/* =========================== DASHBOARD =========================== *
+        *
+        * Placed here and nowhere else. The section above it has just shown a
+        * score moving inside one session; the only honest next sentence is
+        * "and it keeps moving after you close the tab", which is the whole
+        * claim of a dashboard. Put before the trend it would be a feature
+        * list; put after the register it would be an afterthought.
+        */}
+      <section className="rl-section rl-board">
+        <div className="rl-board__lead" data-reveal>
+          <h2 className="rl-h2">
+            Then it keeps moving,
+            <br />
+            across every session.
+          </h2>
+          <p className="rl-lede">
+            Scored turns do not end with the conversation they happened in. Your dashboard
+            replays every one of them, per mode, measured from the day you arrived.
+          </p>
+          <p className="rl-prose">
+            Coach and Resume Review each get their own panel, their own baseline and their own
+            four criteria — never one blended figure, because the two rubrics do not measure the
+            same thing and an average across them would mean nothing. The other two modes answer
+            rather than assess, so they are not on it.
+          </p>
+          <ul className="rl-board__list">
+            {BOARD_SHOWS.map((s) => (
+              <li key={s.claim}>
+                <span className="rl-board__addr">{s.address}</span>
+                <h3 className="rl-board__claim">{s.claim}</h3>
+                <p className="rl-board__body">{s.body}</p>
+              </li>
+            ))}
+          </ul>
+          <div className="rl-board__act" ref={boardRef}>
+            {/* Signed in, the dashboard is a place they can go; signed out it is
+                a thing they have to earn a first score to fill, so the action is
+                the same one the rest of the page is asking for. Two different
+                destinations would be dishonest in either direction. */}
+            {signedIn ? (
+              <Command href="#/dashboard" tone="accent">
+                Open your dashboard
+              </Command>
+            ) : (
+              <Command href={ENTER} tone="accent">
+                Start a chat
+              </Command>
+            )}
+            <span className="rl-board__hint">
+              {signedIn
+                ? 'Everything you have been scored on, in one place.'
+                : 'It fills in from your first scored turn.'}
+            </span>
+          </div>
+        </div>
+
+        <figure className="rl-board__figwrap" data-reveal>
+          <FigBoard />
+          {/* The third synthetic label on the page, for the same reason as the
+              other two: it does not carry across a section boundary, and a
+              drawn arc from 38 to 84 would otherwise read as a measured result. */}
+          <figcaption>
+            The Coach panel · eight turns over four sittings · synthetic
+          </figcaption>
+        </figure>
+      </section>
+
       {/* =========================== REGISTER =========================== */}
       <section className="rl-section rl-register">
         <h2 className="rl-h2 rl-register__h" data-reveal>
@@ -970,13 +1241,10 @@ export default function Landing() {
           <p className="rl-access__hint">
             Browse every mode first. We ask who you are only when you send your first message.
           </p>
-          {/* Below the hint and behind a rule, not beside the button: a thing
-              that does not exist yet cannot sit at the same level as the one
-              action this page is asking for. */}
-          <p className="rl-access__soon">
-            <span>Soon</span> A dashboard — every session in one place, so you can track your
-            progress across modes and see what to work on next.
-          </p>
+          {/* This slot used to carry "Soon — a dashboard". The dashboard ships,
+              so the coming-soon note went with it rather than being downgraded
+              to a second link: the section above already argues for it at
+              length, and the closing frame is asking for exactly one thing. */}
         </div>
       </section>
 

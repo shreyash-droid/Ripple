@@ -30,6 +30,18 @@ response: [{ id, title, mode, updatedAt }]
 GET /api/conversations/:id/messages
 response: [{ id, role, content, meta, createdAt }]
 
+GET /api/progress
+response: { joinedAt, modes, truncated, cards: [{ id, conversationId, title,
+            mode, scorecard, createdAt, conversationCreatedAt }] }
+
+  Every scored turn the caller has, oldest first, across the modes that declare
+  a rubric (coach and reviewer today — the list is derived from
+  backend/lib/rubrics.js, not hardcoded). Cards are sent whole and unrescaled;
+  the dashboard folds them per mode through web/src/lib/scoring.js, which owns
+  the 0-5 → 0-100 normalisation. `joinedAt` is users.created_at, the baseline
+  every "since you arrived" delta is measured from. History is capped at the 600
+  most recent turns and `truncated` says whether the cap was hit.
+
 POST /api/ask
 body: { question, documentId }
 response: { answer, sourcesUsed }

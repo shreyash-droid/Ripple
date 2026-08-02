@@ -96,6 +96,13 @@ export function deleteConversation(conversationId) {
   return request(`/api/conversations/${conversationId}`, { method: 'DELETE' })
 }
 
+/* Every scored turn the user has, oldest first — the dashboard's only read.
+   Returned whole rather than pre-aggregated: lib/progress.js does the folding
+   so the 0-5 → 0-100 rescaling in lib/scoring.js stays the single copy. */
+export function getProgress() {
+  return request('/api/progress')
+}
+
 /* `attachment` marks the turn that submits a file. The resume is folded into the
    message text before it gets here, so by the time the server sees it there is
    nothing to distinguish "here is my resume" from "about that bullet in my

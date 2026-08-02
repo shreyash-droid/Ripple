@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import App from './App.jsx'
 import AuthScreen from './components/AuthScreen.jsx'
+import Dashboard from './pages/Dashboard.jsx'
 import Landing from './pages/Landing.jsx'
 import { useAuth } from './lib/auth-context'
 
-/* The three surfaces, and who is allowed on them.
+/* The four surfaces, and who is allowed on them.
  *
  * This used to be a gate: signed in got the app, everyone else got a login
  * form. That meant the first thing a stranger ever saw was a password field for
@@ -27,6 +28,7 @@ import { useAuth } from './lib/auth-context'
 function readRoute() {
   const hash = window.location.hash
   if (hash.startsWith('#/signin')) return 'signin'
+  if (hash.startsWith('#/dashboard')) return 'dashboard'
   if (hash.startsWith('#/try') || hash.startsWith('#/c')) return 'app'
   return 'landing'
 }
@@ -70,6 +72,13 @@ export default function Root() {
   }, [signedIn])
 
   if (route === 'landing') return <Landing />
+  /* The one genuinely gated surface. Everything else on this site is readable
+     signed out — the chat included, right up to the moment you send — but the
+     dashboard is nothing *but* your own history, so there is no anonymous
+     version of it to show. An anonymous arrival gets the sign-in screen rather
+     than a redirect, so the address they were sent to is still in the bar when
+     they come back through it. */
+  if (route === 'dashboard') return signedIn ? <Dashboard /> : <AuthScreen />
   if (route === 'signin' && !signedIn) return <AuthScreen />
   return <App />
 }

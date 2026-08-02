@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import ProfileBadge from './ProfileBadge'
 import {
+  DashIcon,
   LogInIcon,
   LogOutIcon,
   MoreIcon,
@@ -163,6 +164,19 @@ export default function Sidebar({
           >
             <PlusIcon size={17} />
           </button>
+          {/* Signed-in only, and not because it would fail — because it would
+              be a link to a page that exists solely to show you your own
+              history, offered to someone who has none. */}
+          {signedIn && (
+            <a
+              className="h2c-railbtn"
+              href="#/dashboard"
+              aria-label="Progress dashboard"
+              title="Progress dashboard"
+            >
+              <DashIcon size={17} />
+            </a>
+          )}
         </div>
 
         <div className="h2c-rail__foot">
@@ -223,6 +237,15 @@ export default function Sidebar({
           <PlusIcon />
           New chat
         </button>
+        {/* Under the primary action and styled a step quieter: starting a chat
+            is what this panel is for, and reviewing what came of the last ones
+            is the thing you do second. */}
+        {signedIn && (
+          <a className="h2c-sidelink" href="#/dashboard">
+            <DashIcon />
+            Progress
+          </a>
+        )}
       </div>
 
       <div className="h2c-sidebar__label">Recent</div>
