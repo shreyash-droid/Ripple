@@ -26,12 +26,48 @@ function composeUserTurn(content, attachment) {
   return content ? `${head}\n\n---\n\n${content}` : head;
 }
 
+// Where an auto-generated title stops. Not a storage limit — conversations.title
+// is TEXT — just the point past which a sidebar row is scanning rather than
+// reading, and a whole sentence in there is no more useful than its first clause.
+const TITLE_MAX = 40;
+
+/* Cut to length without cutting through a word.
+ *
+ * `slice(0, 40)` broke mid-word, so a sidebar full of chats read "Ask me a
+ * behavioural question about con" — the truncation looked like a bug in the
+ * message rather than a limit on the title. This backs up to the last space at
+ * or before the limit and marks the cut with an ellipsis, so the row ends on a
+ * word the reader can actually use.
+ *
+ * Whitespace is collapsed first: a message that starts with a line break, or
+ * wraps its opening sentence, would otherwise put those newlines straight into
+ * the title and leave the row rendering a blank or a gap.
+ *
+ * The one case with no word boundary to find — a 60-character URL, a pasted
+ * identifier, a language that does not space its words — falls back to a hard
+ * cut, because a title that backed off to nothing would be worse than one that
+ * breaks.
+ */
+function trimToWord(text, max = TITLE_MAX) {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= max) return clean;
+
+  const cut = clean.slice(0, max);
+  const lastSpace = cut.lastIndexOf(" ");
+  // Only honour the boundary if it leaves a usable title. Backing up to the
+  // first of forty characters is a hard cut wearing a nicer name.
+  const head = lastSpace > max * 0.4 ? cut.slice(0, lastSpace) : cut;
+
+  // Trailing punctuation before an ellipsis reads as a typo: "my resume,…"
+  return `${head.replace(/[\s.,;:!?—-]+$/, "")}…`;
+}
+
 /* A conversation's name in the sidebar. The user's own first words when there
    are any; otherwise the file they sent, because "Here is my resume (cv.pdf):"
    was never a title — it was the first forty characters of a wrapper. */
 function titleFor(message, attachment) {
-  if (message) return message.slice(0, 40);
-  return attachment?.name ? `Resume — ${attachment.name}`.slice(0, 40) : "New chat";
+  if (message) return trimToWord(message);
+  return attachment?.name ? trimToWord(`Resume — ${attachment.name}`) : "New chat";
 }
 
 export const handler = async (event) => {
