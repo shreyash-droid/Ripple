@@ -56,11 +56,13 @@ function writeRoute(conversationId, replace = false) {
   window.history[replace ? 'replaceState' : 'pushState'](null, '', url)
 }
 
-/* Sends the visitor to the sign-in route, keeping the message they composed.
-   pushState rather than replace: Back should return them to the thread they were
-   typing in, not out of the app entirely. */
-function requestSignIn(message, mode) {
-  if (message) stashPending(message, mode)
+/* Sends the visitor to the sign-in route, keeping the message they composed and
+   the file they attached to it. Both, because in reviewer mode the attachment
+   is often the whole turn and an empty box is normal — stashing only the text
+   would land them back on the other side of the login with their resume gone
+   and nothing to explain why. */
+function requestSignIn(message, mode, attachment) {
+  if (message || attachment) stashPending(message, mode, attachment)
   window.location.hash = '#/signin'
 }
 
@@ -315,37 +317,67 @@ export default function App() {
 
   const cancelReveal = () => setAnimatingId(null)
 
-  /* `override` lets an empty-state starter send its own text without waiting a
-     render for setDraft to land. The send button passes onSend straight to
-     onClick, so a click arrives here as an event — only a string is text. */
+  /* `override` lets a caller send without waiting a render for state to land.
+     Two shapes: a bare string is an empty-state starter's own text, and
+     `{ text, attachment }` is a turn resumed from the other side of the sign-in
+     gate, which has to bring back the resume that was on the composer when the
+     user pressed send. The send button passes onSend straight to onClick, so a
+     click arrives here as an event — neither shape, and it falls through to the
+     draft and whatever is actually attached. */
   const send = async (override) => {
-    const text = (typeof override === 'string' ? override : draft).trim()
+    const forced =
+      typeof override === 'string'
+        ? { text: override, attachment: null }
+        : override && typeof override.text === 'string'
+          ? { text: override.text, attachment: override.attachment ?? null }
+          : null
+
+    const text = (forced ? forced.text : draft).trim()
     // A ready resume is itself something to send, so an empty box is fine when
-    // one is attached. A starter click (override) never carries the attachment.
-    const attached =
-      mode === 'reviewer' && !override && resume?.status === 'ready' ? resume : null
+    // one is attached.
+    const attached = forced
+      ? forced.attachment
+      : mode === 'reviewer' && resume?.status === 'ready'
+        ? resume
+        : null
     if ((!text && !attached) || busy) return
 
-    /* The attachment stops being an attachment the moment it is sent: its text
-       is now part of a message in the thread, so re-sending it on the next turn
-       would submit the resume twice. */
-    const outgoing = attached ? withResume(attached, text) : text
+    /* The file rides in its own field from here on. It used to be folded into
+       the message text right at this point, which meant the thread rendered the
+       whole resume as the user's turn and their actual question ended up as a
+       "Context:" footnote under it. The server keeps the two apart the same way
+       — see composeUserTurn in handlers/chat.js, which is the only place they
+       are ever one string, and only on the way into the model. */
+    const outgoing = attached ? { name: attached.name, text: attached.text } : null
 
-    /* The one moment we ask who they are. Deliberately after the resume has been
-       folded in, so someone who attached a PDF and pressed send does not have to
-       attach it again on the other side of the login. Nothing is cleared here —
-       App is about to unmount, and if they abandon the sign-in the thread should
-       be exactly as they left it. */
+    /* The one moment we ask who they are. The stash carries the attachment too,
+       so someone who attached a PDF and pressed send does not have to attach it
+       again on the other side of the login. Nothing is cleared here — App is
+       about to unmount, and if they abandon the sign-in the thread should be
+       exactly as they left it. */
     if (!signedIn) {
-      requestSignIn(outgoing, mode)
+      requestSignIn(text, mode, outgoing)
       return
     }
 
+    /* The attachment stops being an attachment the moment it is sent: it is now
+       part of the conversation on the server, so leaving it on the composer
+       would submit the same resume again on the next turn. */
     if (attached) setResume(null)
 
     enterChat()
 
-    setMessages((m) => [...m, { id: `user-${Date.now()}`, role: 'user', content: outgoing }])
+    setMessages((m) => [
+      ...m,
+      {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: text,
+        // the same shape getMessages returns, so an optimistic row and a
+        // restored one render through one path — chip included
+        meta: outgoing ? { attachment: { name: outgoing.name } } : null,
+      },
+    ])
     setDraft('')
     setLoading(true)
 
@@ -373,11 +405,12 @@ export default function App() {
         replyText = data.answer ?? ''
       } else {
         data = await sendChat({
-          message: outgoing,
+          message: text,
           mode,
           conversationId: activeId,
-          // this turn is the resume arriving, not a question about it
-          attachment: Boolean(attached),
+          // present only on the turn the resume arrives, which is what tells the
+          // reviewer to score it rather than answer a question about it
+          attachment: outgoing,
         })
         replyText = data.reply ?? ''
         // the server runs the conversation's own mode, so if the two ever drift
@@ -424,7 +457,11 @@ export default function App() {
   useEffect(() => {
     if (!signedIn) return
     const pending = takePending()
-    if (pending?.message) sendRef.current?.(pending.message)
+    // an attachment alone is a whole turn in reviewer mode, so either half is
+    // enough to resume on
+    if (pending?.message || pending?.attachment) {
+      sendRef.current?.({ text: pending.message || '', attachment: pending.attachment ?? null })
+    }
   }, [signedIn])
 
   /* Reviewer's upload. Reads the file in the browser and stops — no request, no
@@ -755,14 +792,10 @@ export default function App() {
   )
 }
 
-/* The message an attached resume turns into. The file name is kept so the
-   reviewer can refer to it, and anything the user typed is labelled as context
-   rather than run together with the resume text — otherwise "targeting a
-   backend role" reads like the last line of their experience section. */
-function withResume({ name, text }, note) {
-  const head = `Here is my resume (${name}):\n\n${text}`
-  return note ? `${head}\n\n---\n\nContext: ${note}` : head
-}
+/* `withResume` used to live here, folding the resume into the message text
+   before it was sent. It is gone: the attachment travels in its own field now,
+   and the one place the two are ever a single string is composeUserTurn in
+   backend/handlers/chat.js, on the way into the model. */
 
 function errorMessage(err) {
   return {

@@ -1139,9 +1139,39 @@
   gap: 26px;
 }
 
+/* A column, not a row, since a turn can now carry a file chip above its bubble.
+   Both stay right-aligned — this is the user's side of the thread. */
 .h2c-msg-user {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+/* The file the turn was sent with. A chip, not a bubble: it is a fact about the
+   message rather than something the user said, so it takes the quiet mono the
+   rest of the shell uses for labels and sits above the words in the same way
+   the composer's attachment sits above the box you typed them in. */
+.h2c-msg-user__file {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: min(560px, 88%);
+  padding: 5px 11px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  color: var(--text-secondary);
+  font: 400 11.5px/1 var(--font-mono);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.h2c-msg-user__file svg {
+  flex-shrink: 0;
+  color: var(--text-accent);
 }
 
 .h2c-msg-user__bubble {

@@ -248,6 +248,17 @@ export function TrendIcon({ size = 13 }) {
   )
 }
 
+/* An attachment. The standard paperclip on purpose — a file sent with a message
+   is one of the few things in an app UI where the conventional glyph is doing
+   real work, and inventing a mark for it would buy nothing but a pause. */
+export function PaperclipIcon({ size = 13 }) {
+  return (
+    <Svg size={size}>
+      <path d="M21 11.5l-8.5 8.5a5.5 5.5 0 0 1-7.8-7.8l8.9-8.9a3.7 3.7 0 0 1 5.2 5.2l-8.9 8.9a1.8 1.8 0 0 1-2.6-2.6l8.2-8.2" />
+    </Svg>
+  )
+}
+
 /* The dashboard — three columns rising off a baseline. Deliberately not the
    four-pane "app grid" every product uses for this: the page is a progress
    view, and columns of different heights say measurement where four equal

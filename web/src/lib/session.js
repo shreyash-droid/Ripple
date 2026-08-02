@@ -46,9 +46,15 @@ export function takePending() {
   return pending
 }
 
-export function stashPending(message, mode) {
+/* `attachment` is `{ name, text }` when a resume was on the composer. It is
+   stashed alongside the message rather than folded into it, because that is how
+   it travels everywhere else now — see composeUserTurn in the chat handler. A
+   resume is a few tens of KB and sessionStorage's budget is measured in MB, so
+   the size is fine; if it ever is not, the catch below degrades to losing the
+   attachment rather than blocking the sign-in. */
+export function stashPending(message, mode, attachment = null) {
   try {
-    sessionStorage.setItem(PENDING_KEY, JSON.stringify({ message, mode }))
+    sessionStorage.setItem(PENDING_KEY, JSON.stringify({ message, mode, attachment }))
   } catch {
     // storage unavailable: the sign-in still works, it just won't carry the
     // message through it

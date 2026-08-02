@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm'
 import EmptyState from './EmptyState'
 import Scorecard from './Scorecard'
 import Sources from './Sources'
+import { PaperclipIcon } from './Icons'
 import { useTypewriter } from '../hooks/useTypewriter'
 import { collectScorecards, previousOverall } from '../lib/scoring'
 
@@ -15,6 +16,35 @@ const FOLLOW_THRESHOLD = 140
 
 function prefersReducedMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+}
+
+/* A turn the user sent, and the file they sent with it.
+ *
+ * The file is a chip above the bubble, not text inside it. It used to be the
+ * text inside it: the client folded the whole resume into the message before
+ * sending, so submitting a resume rendered as forty lines of your own CV with
+ * whatever you actually asked buried underneath it. The resume now travels in
+ * its own field and lives in the message's meta, so this row can say "you sent
+ * this file, and here is what you said" — which is what happened.
+ *
+ * A resume sent with an empty box is the normal way to start a review, so the
+ * bubble is dropped entirely when there is nothing to put in it rather than
+ * rendering an empty one under the chip.
+ */
+function UserMessage({ message }) {
+  const attachment = message.meta?.attachment
+
+  return (
+    <div className="h2c-msg-user">
+      {attachment && (
+        <span className="h2c-msg-user__file">
+          <PaperclipIcon size={13} />
+          {attachment.name}
+        </span>
+      )}
+      {message.content && <div className="h2c-msg-user__bubble">{message.content}</div>}
+    </div>
+  )
 }
 
 function AssistantMessage({ message, animate, onRevealDone, scorecard, scoreLabel, previous }) {
@@ -125,9 +155,7 @@ export default function Thread({
 
         {messages.map((m, i) =>
           m.role === 'user' ? (
-            <div className="h2c-msg-user" key={m.id ?? i}>
-              <div className="h2c-msg-user__bubble">{m.content}</div>
-            </div>
+            <UserMessage key={m.id ?? i} message={m} />
           ) : (
             <AssistantMessage
               key={m.id ?? i}

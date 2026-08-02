@@ -1,6 +1,24 @@
 import { query } from "../lib/db.js";
 import { requireAuth } from "../lib/auth.js";
 
+/* The attachment's text stays on the server.
+ *
+ * A stored resume is only there so handlers/chat.js can fold it back into the
+ * model's view of the conversation on later turns. The thread has no use for
+ * it — it renders the user's own words and a chip naming the file — so sending
+ * tens of kilobytes of resume back on every history load would be paying for
+ * something nothing reads, on the one request that gates opening a chat.
+ *
+ * The name survives, because that is what the chip says. */
+function stripAttachmentText(row) {
+  const attachment = row.meta?.attachment;
+  if (!attachment) return row;
+  return {
+    ...row,
+    meta: { ...row.meta, attachment: { name: attachment.name } },
+  };
+}
+
 export const handler = async (event) => {
   try {
     // 0. Authenticate. Throws AuthError(401) without a valid Bearer token.
@@ -33,7 +51,8 @@ export const handler = async (event) => {
     }
 
     // `meta` carries the rubric scorecard for turns the coach/reviewer scored,
-    // so reopening a conversation restores its cards and its session trend.
+    // so reopening a conversation restores its cards and its session trend. It
+    // also carries an attached resume on the user turn that submitted one.
     const messages = await query(
       `SELECT id, role, content, meta, created_at
        FROM messages
@@ -45,7 +64,7 @@ export const handler = async (event) => {
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversationId, messages }),
+      body: JSON.stringify({ conversationId, messages: messages.map(stripAttachmentText) }),
     };
   } catch (err) {
     return {

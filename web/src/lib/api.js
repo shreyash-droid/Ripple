@@ -103,11 +103,14 @@ export function getProgress() {
   return request('/api/progress')
 }
 
-/* `attachment` marks the turn that submits a file. The resume is folded into the
-   message text before it gets here, so by the time the server sees it there is
-   nothing to distinguish "here is my resume" from "about that bullet in my
-   resume" — and the reviewer only scores the first kind. */
-export function sendChat({ message, mode, conversationId, attachment = false }) {
+/* `attachment` is `{ name, text }` on the turn that submits a resume, and null
+   otherwise. It travels in its own field rather than glued into `message`: the
+   message is what the user typed and is what the thread renders and the server
+   stores, and a turn whose visible content was forty lines of somebody's own
+   resume was hiding their question inside their evidence. Its presence is also
+   what tells the reviewer "here is my resume" from "about that bullet in my
+   resume" — the first kind is scored, the second is answered. */
+export function sendChat({ message, mode, conversationId, attachment = null }) {
   return request('/api/chat', {
     method: 'POST',
     body: JSON.stringify({
