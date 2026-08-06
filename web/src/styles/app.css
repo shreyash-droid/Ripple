@@ -229,11 +229,37 @@
   pointer-events: none;
 }
 
+/* How far back the wave field is held, and it has to be two different answers.
+ *
+ * BinaryWaves never stops: at progress 1 it only sinks 18% and flattens to a
+ * third of its amplitude (see `sink` and `flat` in BinaryWaves.jsx), so it keeps
+ * drawing digits across the lower two thirds of the viewport for the whole
+ * session. At the hero that is the point — it is the surface the visitor arrives
+ * on. Behind a thread it is type competing with type, and animated type at that.
+ *
+ * A flat 0.45 could only serve one of those. Tying the scrim to --p serves both:
+ * the field is as present as it ever was on arrival and recedes to a texture you
+ * can still see but never read against by the time the chat has committed. The
+ * digits are drawn at low alpha to begin with, so 0.88 leaves them legible as
+ * atmosphere without leaving them legible as digits.
+ *
+ * opacity rather than calc() inside the colour's alpha channel: the arithmetic
+ * is identical and this form has no support floor worth thinking about. */
 .h2c-binary-scrim {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: rgba(10, 10, 11, 0.45);
+  background: rgb(10, 10, 11);
+  /* Read this as: hero value, then how much darker it gets by the chat, then the
+     ceiling. The FIRST number is what the visitor arrives to — pushing it up is
+     what turns the hero's field black, which is not the same knob as holding the
+     field back behind a thread.
+     0.32 at the hero is lighter than the 0.45 this started at, because the
+     digits were reading as a smudge; 0.82 in the chat is where they stay visible
+     as texture without competing with type. Both are tuned against the raised
+     layer alphas in BinaryWaves.jsx — move one without the other and this goes
+     straight back to unreadable or blank. */
+  opacity: clamp(0.12, calc(0.12 + 0.5 * var(--p, 0)), 0.52);
 }
 
 /* ------------------------------------------------------------------ *
@@ -597,6 +623,10 @@
   opacity: var(--chat-vis, 0);
   transform: translateY(calc((1 - var(--chat-vis, 0)) * 20px));
   pointer-events: var(--chat-pe, none);
+  /* Deliberately no background. An opaque ground here made the thread perfectly
+     readable and killed the wave field for the entire session, which is most of
+     the app's character gone to solve a contrast problem. The field is dimmed at
+     its own source instead — see .h2c-binary-scrim. */
 }
 
 /* sidebar */
@@ -1051,6 +1081,15 @@
   min-width: 0;
   min-height: 0;
 }
+
+/* No full-width scrim here, and deliberately not.
+ *
+ * A gradient band across the foot of this column was the first attempt at
+ * separating the thread from the composer, and it was the wrong instrument: it
+ * darkened the whole bottom of the screen, including the empty margins either
+ * side of the bar, which reads as a change in the page rather than as an object
+ * sitting on it. The separation belongs to the bar — see the box-shadow on
+ * .h2c-inputbar, which hugs it. */
 
 .h2c-main__header {
   display: flex;
@@ -1508,6 +1547,51 @@
   z-index: 12;
 }
 
+/* The composer's own ground.
+ *
+ * The input bar has an opaque background, so it was never the problem. The
+ * clutter is everything above it: the mode pills are separate rounded chips with
+ * transparent gaps between them, and the document chip is
+ * rgba(255,255,255,0.04) — so thread text scrolled straight through both, and a
+ * citation would end up running through the middle of "Document Q&A".
+ *
+ * A shadow on the bar cannot reach that; only something behind the whole
+ * assembly can. So this is sized to the assembly and nothing more: the composer
+ * is 680px against a 720px thread column, so 30px of horizontal overhang
+ * already clears the text, and 56px above covers the pill row with a short fade
+ * over it.
+ *
+ * Two earlier attempts failed by reaching too far — a band across the full width
+ * of the column, then a radial 100px out on every side. Both darkened space that
+ * had nothing to do with the composer, which reads as a change in the page
+ * instead of a ground under an object. The horizontal mask is what keeps this one
+ * honest: without it the band ends in two hard vertical edges running down the
+ * thread, which is the tell that gave the first attempt away.
+ *
+ * z-index -1 keeps it inside the composer's own stacking context (at 12, above
+ * .h2c-chat) but behind the bar and the pills, so it never dims the controls it
+ * exists to separate. It needs its own --chat-vis gate because the composer is a
+ * sibling of .h2c-chat rather than a child, so it does not inherit that fade —
+ * and at the hero there is no thread behind it to separate from.
+ */
+.h2c-composer::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -56px -30px -26px;
+  pointer-events: none;
+  opacity: var(--chat-vis, 0);
+  background: linear-gradient(
+    180deg,
+    rgba(10, 10, 11, 0) 0%,
+    rgba(10, 10, 11, 0.72) 30%,
+    rgba(10, 10, 11, 0.93) 58%,
+    rgba(10, 10, 11, 0.97) 100%
+  );
+  mask-image: linear-gradient(90deg, transparent 0%, #000 9%, #000 91%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 9%, #000 91%, transparent 100%);
+}
+
 /* aligned to the left edge of the input bar below it */
 .h2c-modes {
   width: min(640px, 100%);
@@ -1652,6 +1736,11 @@
   backdrop-filter: blur(var(--blur-panel));
   -webkit-backdrop-filter: blur(var(--blur-panel));
   border: 1px solid var(--border-default);
+  /* Back to the shared token. Separating the bar from the thread is the
+     composer's ground now (.h2c-composer::before); this shadow's only job is
+     lifting the bar off that ground, which is what --shadow-raised is for.
+     Stacking a heavy custom shadow on top of the gradient was two solutions to
+     one problem, and the darker one made the bar look like it was sinking. */
   box-shadow: var(--shadow-raised);
 }
 

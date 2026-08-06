@@ -4,10 +4,17 @@ import { useEffect, useRef } from 'react'
 // dissolving toward the crest. `base` puts the crest at 60% of the height, so
 // the field fills the bottom 40% of the screen. The waves recede, flatten and
 // phase-shift as scroll progress (`progressRef`) moves hero → chat.
+/* `alpha` is the layer's ceiling, and the digits never reach it: the depth
+   factor below scales each one by 0.3–1.0 by how far it sits under the crest, so
+   a 0.32 layer draws its faintest digits at about 0.1. These were 0.2 / 0.14 /
+   0.1, which put the crest of the nearest layer at 6% over near-black — the
+   field read as a smudge rather than as digits, and the scrim over it took what
+   was left. Raised together and in proportion, so the three layers keep their
+   depth order: nearest brightest, furthest faintest. */
 const LAYERS = [
-  { base: 0.6, amp: 0.055, k: 0.0045, k2: 0.011, speed: 0.3, color: '124,240,255', alpha: 0.2 },
-  { base: 0.645, amp: 0.07, k: 0.0032, k2: 0.008, speed: -0.2, color: '41,121,255', alpha: 0.14 },
-  { base: 0.69, amp: 0.085, k: 0.0024, k2: 0.006, speed: 0.13, color: '124,111,255', alpha: 0.1 },
+  { base: 0.6, amp: 0.055, k: 0.0045, k2: 0.011, speed: 0.3, color: '124,240,255', alpha: 0.32 },
+  { base: 0.645, amp: 0.07, k: 0.0032, k2: 0.008, speed: -0.2, color: '41,121,255', alpha: 0.23 },
+  { base: 0.69, amp: 0.085, k: 0.0024, k2: 0.006, speed: 0.13, color: '124,111,255', alpha: 0.17 },
 ]
 
 // Cursor interaction: the crest bulges upward toward the pointer, digits in
